@@ -8,6 +8,11 @@ import ast
 
 
 def cleaning_data(file_name):
+	'''
+	Step 1:
+	Using BeautifulSoup to get parse the information from .xml file.
+	Using Pandas to get a dataframe of all the values.
+	'''
 
     steps_df = pd.DataFrame()
     start_date_col = []
@@ -30,12 +35,18 @@ def cleaning_data(file_name):
     steps_df['end_date'] = end_date_col
     steps_df['num_steps'] = num_steps_col
     steps_df['source'] = source_col
+
     steps_df['num_steps'] = steps_df.num_steps.astype(int)
 
     return steps_df
 
 
 def clean_start_end_times(steps_df, s_o_e):
+	'''
+	Step : 2
+	Separate out end and start times to different dataframes and remove unnecessary
+	items.
+	'''
 
     d_df = steps_df[(s_o_e + '_date')].str.split(' ', expand=True)
     d_df.columns = [(s_o_e + '_date'), (s_o_e + '_time'), 'time_zone']
@@ -50,6 +61,10 @@ def clean_start_end_times(steps_df, s_o_e):
 
 
 def clean_duration(steps_df):
+	'''
+	Step : 3
+	Create a new dataframe combining the start and end times.
+	'''
 
     sd_df = clean_start_end_times(steps_df, 'start')
     ed_df = clean_start_end_times(steps_df, 'end')
@@ -64,12 +79,16 @@ def clean_duration(steps_df):
 
 
 def remove_overlap_time_rows(df):
+	'''
+	Step : 4
+	Remove all the rows that overlap times.
+	'''
 
     i = 0
     while i < len(df) - 1:
         if (df.start_date[i] == df.end_date[i]) and (
                 df.start_date[i] == df.end_date[i + 1]) and (
-                df.start_date[i] == df.start_date[i + 1])and (
+                df.start_date[i] == df.start_date[i + 1]) and (
                 df.start_time[i] <= df.start_time[i + 1]) and (
                 df.end_time[i] >= df.end_time[i + 1]):
 
@@ -80,14 +99,16 @@ def remove_overlap_time_rows(df):
         else:
             i += 1
 
-    df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df.reset_index(inplace=True)
-    df.drop(columns=['index'], inplace=True)
+    df = reset_df(df)
 
     return df
 
 
 def trim_steps_from_overlapping_times(df):
+	'''
+	Step : 5
+	Correct total steps and times from overlapping times.
+	'''
 
     i = 0
     while i < len(df) - 1:
@@ -122,14 +143,17 @@ def trim_steps_from_overlapping_times(df):
         else:
             i += 1
 
-    df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df.reset_index(inplace=True)
-    df.drop(columns=['index'], inplace=True)
+	df = reset_df(df)
 
     return df
 
 
 def split_steps_between_days(df):
+	'''
+	Step : 6
+	Split number of steps between days, in case a measurement starts on one day
+	and finishes the following or more days from that time.
+	'''
 
     i = 0
     while i < len(df) - 1:
@@ -175,14 +199,17 @@ def split_steps_between_days(df):
         else:
             i += 1
 
-    df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df.reset_index(inplace=True)
-    df.drop(columns=['index'], inplace=True)
+    df = reset_df(df)
 
     return df
 
 
 def print_remainder(df):
+	'''
+	This is just to check how many rows are left in the dataframe,
+	sum of total steps, and how many instances are left that start
+	on one day and finishes another day.
+	'''
 
     print(f'Total Rows = {len(df)}')
     print(f'Total Steps = {df.num_steps.sum()}')
@@ -190,6 +217,9 @@ def print_remainder(df):
 
 
 def print_all_info(df):
+	'''
+	Get the information of any dataframe.
+	'''
     print('^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^df.head()^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
     print(df.head())
     print('\n\n^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^df.tail()^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^')
@@ -201,6 +231,11 @@ def print_all_info(df):
 
 
 def reset_df(df):
+	'''
+	Found this convinient, since removing and adding rows every function could lead
+	to missing indexes and data not being in correct order.
+	'''
+
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
     df = df[df['num_steps'] > 0]
     df.reset_index(inplace=True)
