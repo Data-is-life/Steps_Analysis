@@ -6,17 +6,22 @@ import pandas as pd
 import numpy as np
 
 def remove_end_date_rename_start_date(df):
-	df.drop(columns=['end_date'], inplace=True)
-	df.rename({'start_date': 'date'}, inplace=True)
+	
 	return df
 
 def sum_day_df(df):
-	df = remove_end_date_rename_start_date(df)
+	
+	df.drop(columns=['end_date'], inplace=True)
+	df.rename({'start_date': 'date'}, inplace=True)
+    
     summed_df = df.groupby(by=['date']).sum()
     summed_df.reset_index(inplace=True)
+    
     summed_df['steps_per_hour'] = summed_df[
         'num_steps'] / summed_df['duration']
+    
     summed_df.drop(columns=['start_time', 'end_time'], inplace=True)
+    
     return summed_df
 
 
