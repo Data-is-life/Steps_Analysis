@@ -112,11 +112,10 @@ def trim_steps_from_overlapping_times(df):
     Step : 5
     Correct total steps and times from overlapping times.
     '''
-
+#(df.source[i] != df.source[i + 1]) and 
     i = 0
     while i < len(df) - 1:
-        if (df.source[i] != df.source[i + 1]) and (
-            df.start_date[i] == df.end_date[i]) and (
+        if (df.start_date[i] == df.end_date[i]) and (
                 df.start_date[i] == df.end_date[i + 1]) and(
                 df.start_date[i] == df.start_date[i + 1]) and (
                 df.start_time[i + 1] <= df.end_time[i]) and (

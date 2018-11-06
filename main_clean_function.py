@@ -34,29 +34,24 @@ def main_clean_function(file_name):
 	df['end_time'] = pd.to_numeric(df['end_time']) / 3600000000000
 	df['duration'] = pd.to_numeric(df['duration']) / 3600000000000
 
-	df = split_steps_between_days(df) # Step 6, split multi-day data.
+	df = split_steps_between_days(df) # Step 4, split multi-day data.
 	print_remainder(df)
 	df = reset_df(df)
-	print_remainder(df)
 
-	df = remove_overlap_time_rows(df) # Step 4, remove overlapping times rows.
+	df = remove_overlap_time_rows(df) # Step 5, remove overlapping times rows.
 	print_remainder(df)
-
 	df = reset_df(df)
-	print_remainder(df)
 
-	df = trim_steps_from_overlapping_times(df) # Step 5, trim steps from overlapping times.
+	df = trim_steps_from_overlapping_times(df) # Step 6, trim steps from overlapping times.
 	print_remainder(df)
+	df = reset_df(df)
+
+	df = df[df['duration'] > 1.0e-5]
 	df = reset_df(df)
 	print_remainder(df)
 
 	# df['duration'] = np.where(df['start_date'] == df['end_date'],
 	# 						(df['end_time'] - df['start_time']), df['duration'])
-
-	df = df[df['duration'] > 1.0e-5]
-	print_remainder(df)
-	df = reset_df(df)
-	print_remainder(df)
 
 	# df = split_steps_between_days(df) # Step 6, split multi-day data.
 	# print_remainder(df)
