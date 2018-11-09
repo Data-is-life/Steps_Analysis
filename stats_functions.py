@@ -19,8 +19,8 @@ def all_interesting_stats(df, df_w, df_m, df_sd, df_td):
     l_s_sd = df_sd.num_steps.min()  # Check for least steps in a 7 day period
     l_s_td = df_td.num_steps.min()  # Check for least steps in a 30 day period
 
-    # Check for highest score in a week. Score = mean/variance
-    m_sc_w = df_w.mv_score.max()
+    # Score = mean/variance
+    m_sc_w = df_w.mv_score.max() # Check for highest score in a week.
     m_sc_m = df_m.mv_score.max()  # Check for highest score in a month
     m_sc_sd = df_sd.mv_score.max()  # Check for highest score in a 7 day period
     m_sc_td = df_td.mv_score.max()  # Check for highest score in a 30 day period
