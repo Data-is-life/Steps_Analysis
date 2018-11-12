@@ -1,7 +1,7 @@
 import pandas as pd
 
 
-def all_interesting_stats(df, df_w, df_m, df_sd, df_td):
+def all_interesting_stats(df, df_w, df_m, df_tf, df_sd, df_td):
     '''This function checks most and least values for the day, month, week,
     rolling 7 days, and rolling 30 days'''
 
@@ -20,7 +20,7 @@ def all_interesting_stats(df, df_w, df_m, df_sd, df_td):
     l_s_td = df_td.num_steps.min()  # Check for least steps in a 30 day period
 
     # Score = mean/variance
-    m_sc_w = df_w.mv_score.max() # Check for highest score in a week.
+    m_sc_w = df_w.mv_score.max()  # Check for highest score in a week.
     m_sc_m = df_m.mv_score.max()  # Check for highest score in a month
     m_sc_sd = df_sd.mv_score.max()  # Check for highest score in a 7 day period
     m_sc_td = df_td.mv_score.max()  # Check for highest score in a 30 day period

@@ -4,8 +4,6 @@
 
 import pandas as pd
 from bs4 import BeautifulSoup
-import ast
-from math import floor
 import numpy as np
 
 
@@ -47,8 +45,8 @@ def cleaning_data(file_name):
 def clean_start_end_times(steps_df, s_o_e):
     '''
     Step : 2
-    Separate out end and start times to different dataframes and remove unnecessary
-    items.
+    Separate out end and start times to different dataframes and remove
+    unnecessary items.
     '''
 
     d_df = steps_df[(s_o_e + '_date')].str.split(' ', expand=True)
@@ -112,7 +110,7 @@ def trim_steps_from_overlapping_times(df):
     Step : 5
     Correct total steps and times from overlapping times.
     '''
-#(df.source[i] != df.source[i + 1]) and 
+
     i = 0
     while i < len(df) - 1:
         if (df.start_date[i] == df.end_date[i]) and (
@@ -244,14 +242,14 @@ def print_all_info(df):
 
 def reset_df(df):
     '''
-    Found this convinient, since removing and adding rows every function could lead
-    to missing indexes and data not being in correct order.
+    Found this convinient, since removing and adding rows every function could
+    lead to missing indexes and data not being in correct order.
     '''
 
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
     df = df[df['num_steps'] > 0.4444]
     df['duration'] = np.where(df['start_date'] == df['end_date'],
-    	(df['end_time'] - df['start_time']), df['duration'])
+      (df['end_time'] - df['start_time']), df['duration'])
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
     return df
