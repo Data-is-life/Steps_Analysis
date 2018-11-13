@@ -32,10 +32,10 @@ def cleaning_data(file_name):
         num_steps_col.append(num['value'])
         source_col.append(num['sourceName'])
 
-    steps_df['start_date'] = start_date_col
-    steps_df['end_date'] = end_date_col
-    steps_df['num_steps'] = num_steps_col
-    steps_df['source'] = source_col
+    steps_df.loc[:, 'start_date'] = start_date_col
+    steps_df.loc[:, 'end_date'] = end_date_col
+    steps_df.loc[:, 'num_steps'] = num_steps_col
+    steps_df.loc[:, 'source'] = source_col
 
     steps_df.loc[:, 'num_steps'] = steps_df.num_steps.astype(int)
 
@@ -57,11 +57,11 @@ def clean_start_end_times(steps_df, s_o_e):
     d_df = steps_df[(s_o_e + '_date')].str.split(' ', expand=True)
     d_df.columns = [(s_o_e + '_date'), (s_o_e + '_time'), 'time_zone']
 
-    d_df = d_df.drop(columns=['time_zone'])
-    d_df[s_o_e + '_date'] = pd.to_datetime(
+    d_df.drop(columns=['time_zone'], inplace=True)
+    d_df.loc[:, s_o_e+'_date'] = pd.to_datetime(
         d_df[s_o_e + '_date'], format='%Y/%m/%d')
 
-    d_df[s_o_e + '_time'] = pd.to_timedelta(d_df[s_o_e + '_time'])
+    d_df.loc[:, s_o_e+'_time'] = pd.to_timedelta(d_df[s_o_e + '_time'])
 
     return d_df
 
@@ -76,10 +76,10 @@ def clean_duration(steps_df):
     ed_df = clean_start_end_times(steps_df, 'end')
     dur_df = pd.concat([sd_df, ed_df], axis=1)
 
-    dur_df['sdt'] = dur_df['start_date'] + dur_df['start_time']
-    dur_df['edt'] = dur_df['end_date'] + dur_df['end_time']
-    dur_df['duration'] = dur_df['edt'] - dur_df['sdt']
-    dur_df = dur_df.drop(columns=['sdt', 'edt'])
+    dur_df.loc[:, 'sdt'] = dur_df['start_date'] + dur_df['start_time']
+    dur_df.loc[:, 'edt'] = dur_df['end_date'] + dur_df['end_time']
+    dur_df.loc[:, 'duration'] = dur_df['edt'] - dur_df['sdt']
+    dur_df.drop(columns=['sdt', 'edt'], inplace=True)
 
     return dur_df
 
@@ -265,4 +265,3 @@ def reset_df_dos(df):
     df.drop(columns=['index'], inplace=True)
     return df
 
-# Ps: Yes, I love while loops :)

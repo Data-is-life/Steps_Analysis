@@ -30,16 +30,22 @@ def main_clean_function(file_name):
     df.loc[:, 'duration'] = pd.to_numeric(df['duration']) / 3600000000000
 
     df = split_steps_between_days(df)  # Step 4, split multi-day data.
+
     df = reset_df_uno(df)
 
     df = remove_overlap_time_rows(df)  # Step 5, remove overlapping times rows.
+
     df = reset_df_uno(df)
 
+
     df = trim_steps_from_overlapping_times(df)  # Step 6, trim steps from overlapping times.
+
     df = reset_df_uno(df)
 
     df = df[df['duration'] > 1.0e-5]
+
     df = reset_df_dos(df)
+
     df = reset_df_uno(df)
 
     return df
