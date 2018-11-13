@@ -37,7 +37,12 @@ def cleaning_data(file_name):
     steps_df['num_steps'] = num_steps_col
     steps_df['source'] = source_col
 
-    steps_df['num_steps'] = steps_df.num_steps.astype(int)
+    steps_df.loc[:, 'num_steps'] = steps_df.num_steps.astype(int)
+
+    steps_df.sort_values(by=['start_date', 'end_date'], inplace=True)
+    steps_df = steps_df[steps_df['num_steps'] > 0.4444]
+    steps_df.reset_index(inplace=True)
+    steps_df.drop(columns=['index'], inplace=True)
 
     return steps_df
 
@@ -81,7 +86,7 @@ def clean_duration(steps_df):
 
 def remove_overlap_time_rows(df):
     '''
-    Step : 4
+    Step : 5
     Remove all the rows that overlap times.
     '''
 
@@ -100,14 +105,12 @@ def remove_overlap_time_rows(df):
         else:
             i += 1
 
-    df = reset_df(df)
-
     return df
 
 
 def trim_steps_from_overlapping_times(df):
     '''
-    Step : 5
+    Step : 6
     Correct total steps and times from overlapping times.
     '''
 
@@ -138,21 +141,18 @@ def trim_steps_from_overlapping_times(df):
                 df.drop(index=(i + 1), inplace=True)
                 df.reset_index(inplace=True)
                 df.drop(columns=['index'], inplace=True)
-
             else:
                 i += 1
 
         else:
             i += 1
 
-    df = reset_df(df)
-
     return df
 
 
 def split_steps_between_days(df):
     '''
-    Step : 6
+    Step : 4
     Split number of steps between days, in case a measurement starts on one day
     and finishes the following or more days from that time.
     '''
@@ -193,10 +193,8 @@ def split_steps_between_days(df):
 
             df.loc[i + .1] = [dt_2, 0.0, dt_2, 24.0,
                               num_st_2, 24.0, sauce]
-
             df.loc[i + .2] = [end_dt, 0.0, end_dt, end_tm,
                               num_st_3, end_tm, sauce]
-
             df.loc[i] = [st_dt, st_tm, st_dt, 24.0,
                          num_st_1, (24.0 - st_tm), sauce]
 
@@ -207,8 +205,6 @@ def split_steps_between_days(df):
 
         else:
             i += 1
-
-    df = reset_df(df)
 
     return df
 
@@ -240,7 +236,7 @@ def print_all_info(df):
     print(df.info())
 
 
-def reset_df(df):
+def reset_df_uno(df):
     '''
     Found this convinient, since removing and adding rows every function could
     lead to missing indexes and data not being in correct order.
@@ -248,7 +244,22 @@ def reset_df(df):
 
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
     df = df[df['num_steps'] > 0.4444]
-    df['duration'] = np.where(df['start_date'] == df['end_date'],
+    df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
+      (df['end_time'] - df['start_time']), df['duration'])
+    df.reset_index(inplace=True)
+    df.drop(columns=['index'], inplace=True)
+    return df
+
+
+def reset_df_dos(df):
+    '''
+    Found this convinient, since removing and adding rows every function could
+    lead to missing indexes and data not being in correct order.
+    '''
+
+    df.sort_values(by=['start_date', 'end_time'], inplace=True)
+    df = df[df['num_steps'] > 0.4444]
+    df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
       (df['end_time'] - df['start_time']), df['duration'])
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
