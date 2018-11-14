@@ -4,33 +4,20 @@
 
 import pandas as pd
 
-def create_daily_df(df):
-    '''To run stats, first thing to do is get total for each day.
-       So, group it by start and end date, they should be the same
-       get rid of start_time, end_time, and duration columns.'''
-
-    daily_df = df.groupby(by=['start_date', 'end_date']).sum()
-    daily_df.drop(columns=['start_time', 'end_time', 'duration'], inplace=True)
-    daily_df.reset_index(inplace=True)
-    return daily_df
-
-def merge_steps_and_distance(steps_df, distance_df):
-    # steps_df.set_index(['start_date', 'end_date'], inplace=True)
-    # distance_df.set_index(['start_date', 'end_date'], inplace=True)
-    combined_df = pd.concat([steps_df, distance_df], sort=False, axis=1)
-    return combined_df
-
 
 def drop_change_rename_df(df, x, col_rnm):
-    df.drop(df.index[list(range(x-1))], inplace=True)
+
+    df.drop(df.index[list(range(x - 1))], inplace=True)
     df.reset_index(inplace=True)
 #     df.drop(columns=['index'], inplace=True)
     df.loc[:, 'start_date'] = df['end_date'] - pd.Timedelta(x, unit='D')
-    df.rename(columns={'num_steps': col_rnm+'num_steps'}, inplace=True)
+    df.rename(columns={'num_steps': col_rnm + 'num_steps'}, inplace=True)
     if 'index' in df.columns:
         df.drop(columns=['index'], inplace=True)
     df.set_index(['start_date', 'end_date'], inplace=True)
+
     return df
+
 
 def rolling_day_df(df, x):
     df.set_index(['start_date', 'end_date'], inplace=True)
@@ -65,7 +52,7 @@ def rolling_day_df(df, x):
     max_df = drop_change_rename_df(max_df, x, 'max_')
     merged_df_tres = pd.merge(min_df, max_df, on=min_df.index)
 
-    merged_df_quatro = pd.merge(merged_df_uno, merged_df_dos, 
+    merged_df_quatro = pd.merge(merged_df_uno, merged_df_dos,
                                 on=merged_df_uno.index)
 
     merged_df_finale = pd.merge(merged_df_quatro, merged_df_tres,
@@ -80,7 +67,7 @@ def rolling_day_df(df, x):
         merged_df_finale['std_num_steps']
 
     merged_df_finale.reset_index(inplace=True)
-    
+
     merged_df_finale.drop(columns=['index', 'key_0'], inplace=True)
 
     return merged_df_finale

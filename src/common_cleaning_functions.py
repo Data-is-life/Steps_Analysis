@@ -7,33 +7,24 @@ from bs4 import BeautifulSoup
 import numpy as np
 
 
-def parse_xml_to_soup(file_name):
-    '''Using BeautifulSoup to get parse the information from .xml file.'''
-
-    with open(file_name) as fp:
-        soup = BeautifulSoup(fp, 'lxml-xml')
-    return soup
-
-
 def clean_start_end_times(df, s_o_e):
-    '''Step 2:
-       Separate out end and start times to different dataframes and remove
+    '''Separate out end and start times to different dataframes and remove
        timezone. Also split the date and time to two different columns.'''
 
     d_df = df[(s_o_e + '_date')].str.split(' ', expand=True)
     d_df.columns = [(s_o_e + '_date'), (s_o_e + '_time'), 'time_zone']
 
     d_df.drop(columns=['time_zone'], inplace=True)
-    d_df.loc[:, s_o_e+'_date'] = pd.to_datetime(
+    d_df.loc[:, s_o_e + '_date'] = pd.to_datetime(
         d_df[s_o_e + '_date'], format='%Y/%m/%d')
 
-    d_df.loc[:, s_o_e+'_time'] = pd.to_timedelta(d_df[s_o_e + '_time'])
+    d_df.loc[:, s_o_e + '_time'] = pd.to_timedelta(d_df[s_o_e + '_time'])
 
     return d_df
 
 
 def clean_duration(df):
-    '''Step : 3
+    '''Step : 2
        Create a new dataframe combining the start and end times.'''
 
     sd_df = clean_start_end_times(df, 'start')
@@ -46,6 +37,45 @@ def clean_duration(df):
     dur_df.drop(columns=['sdt', 'edt'], inplace=True)
 
     return dur_df
+
+
+def clean_columns_conv_to_numeric(steps_df, dist_df, dur_stp_df, dur_dst_df):
+    '''Step : 3       
+       First combine duration dataframe and the dataframe with all the values.
+       Second keep only the columns needed.
+       Third reset the and sort the dataframes by date and time.
+       Fourth convert the time and duration to numeric values. numeric values.
+       are a lot easier to work with than time deltas.'''
+
+    steps_df.drop(columns=['start_date', 'end_date'], inplace=True)
+    dist_df.drop(columns=['start_date', 'end_date'], inplace=True)
+
+    stp_df = pd.concat([steps_df, dur_stp_df], axis=1)
+    dst_df = pd.concat([dist_df, dur_dst_df], axis=1)
+
+    stp_df = stp_df[['start_date', 'start_time', 'end_date', 'end_time',
+                     'num_steps', 'duration', 'source']]
+    dst_df = dst_df[['start_date', 'start_time', 'end_date', 'end_time',
+                     'tot_dist', 'duration', 'source']]
+
+    stp_df = reset_steps_uno(stp_df)
+    dst_df = reset_distance_uno(dst_df)
+
+    stp_df.loc[:, 'start_time'] = pd.to_numeric(
+        stp_df['start_time']) / 3600000000000
+    stp_df.loc[:, 'end_time'] = pd.to_numeric(
+        stp_df['end_time']) / 3600000000000
+    stp_df.loc[:, 'duration'] = pd.to_numeric(
+        stp_df['duration']) / 3600000000000
+
+    dst_df.loc[:, 'start_time'] = pd.to_numeric(
+        dst_df['start_time']) / 3600000000000
+    dst_df.loc[:, 'end_time'] = pd.to_numeric(
+        dst_df['end_time']) / 3600000000000
+    dst_df.loc[:, 'duration'] = pd.to_numeric(
+        dst_df['duration']) / 3600000000000
+
+    return stp_df, dst_df
 
 
 def remove_overlap_time_rows(df):
@@ -120,7 +150,7 @@ def reset_distance_uno(df):
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
     df = df[df['tot_dist'] > 1e-4]
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
-          (df['end_time'] - df['start_time']), df['duration'])
+                                     (df['end_time'] - df['start_time']), df['duration'])
 
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
@@ -135,7 +165,7 @@ def reset_distance_dos(df):
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
     df = df[df['duration'] > 5e-4]
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
-          (df['end_time'] - df['start_time']), df['duration'])
+                                     (df['end_time'] - df['start_time']), df['duration'])
 
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
@@ -150,7 +180,7 @@ def reset_steps_uno(df):
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
     df = df[df['num_steps'] > 0.4444]
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
-          (df['end_time'] - df['start_time']), df['duration'])
+                                     (df['end_time'] - df['start_time']), df['duration'])
 
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
@@ -164,7 +194,7 @@ def reset_steps_dos(df):
     df.sort_values(by=['start_date', 'end_time'], inplace=True)
     df = df[df['num_steps'] > 0.4444]
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
-          (df['end_time'] - df['start_time']), df['duration'])
+                                     (df['end_time'] - df['start_time']), df['duration'])
 
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
