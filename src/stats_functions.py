@@ -1,148 +1,86 @@
+# Author: Mohit Gangwani
+# Date: 11/13/2018
+# Git-Hub: Data-is-Life
+
 import pandas as pd
 
+def create_daily_df(df):
+    '''To run stats, first thing to do is get total for each day.
+       So, group it by start and end date, they should be the same
+       get rid of start_time, end_time, and duration columns.'''
 
-def all_interesting_stats(df, df_w, df_m, df_tf, df_sd, df_td):
-    '''This function checks most and least values for the day, month, week,
-    rolling 7 days, and rolling 30 days'''
+    daily_df = df.groupby(by=['start_date', 'end_date']).sum()
+    daily_df.drop(columns=['start_time', 'end_time', 'duration'], inplace=True)
+    daily_df.reset_index(inplace=True)
+    return daily_df
 
-    m_s_d = df.num_steps.max()  # Check for most steps in a day
-    m_s_w = df_w.num_steps.max()  # Check for most steps in a week
-    m_s_m = df_m.num_steps.max()  # Check for most steps in a month
-    m_s_tf = df_tf.num_steps.max()  # Check for most steps in a 24 hour period
-    m_s_sd = df_sd.num_steps.max()  # Check for most steps in a 7 day period
-    m_s_td = df_td.num_steps.max()  # Check for most steps in a 30 day period
+def merge_steps_and_distance(steps_df, distance_df):
+    # steps_df.set_index(['start_date', 'end_date'], inplace=True)
+    # distance_df.set_index(['start_date', 'end_date'], inplace=True)
+    combined_df = pd.concat([steps_df, distance_df], sort=False, axis=1)
+    return combined_df
 
-    l_s_d = df.num_steps.min()  # Check for least steps in a day
-    l_s_w = df_w.num_steps.min()  # Check for least steps in a week
-    l_s_m = df_m.num_steps.min()  # Check for least steps in a month
-    l_s_tf = df_tf.num_steps.min()  # Check for least steps in a 24 hour period
-    l_s_sd = df_sd.num_steps.min()  # Check for least steps in a 7 day period
-    l_s_td = df_td.num_steps.min()  # Check for least steps in a 30 day period
 
-    # Score = mean/variance
-    m_sc_w = df_w.mv_score.max()  # Check for highest score in a week.
-    m_sc_m = df_m.mv_score.max()  # Check for highest score in a month
-    m_sc_sd = df_sd.mv_score.max()  # Check for highest score in a 7 day period
-    m_sc_td = df_td.mv_score.max()  # Check for highest score in a 30 day period
+def drop_change_rename_df(df, x, col_rnm):
+    df.drop(df.index[list(range(x-1))], inplace=True)
+    df.reset_index(inplace=True)
+#     df.drop(columns=['index'], inplace=True)
+    df.loc[:, 'start_date'] = df['end_date'] - pd.Timedelta(x, unit='D')
+    df.rename(columns={'num_steps': col_rnm+'num_steps'}, inplace=True)
+    if 'index' in df.columns:
+        df.drop(columns=['index'], inplace=True)
+    df.set_index(['start_date', 'end_date'], inplace=True)
+    return df
 
-    l_sc_w = df_w.mv_score.min()  # Check for lowest score in a week
-    l_sc_m = df_m.mv_score.min()  # Check for lowest score in a month
-    l_sc_sd = df_sd.mv_score.min()  # Check for highest score in a 7 day period
-    l_sc_td = df_td.mv_score.min()  # Check for highest score in a 30 day period
+def rolling_day_df(df, x):
+    df.set_index(['start_date', 'end_date'], inplace=True)
 
-    m_v_w = df_w.varian.max()  # Check for highest variance in a week
-    m_v_m = df_m.varian.max()  # Check for highest variance in a month
-    m_v_sd = df_sd.varian.max()  # Check for highest variance in a 7 day period
-    m_v_td = df_td.varian.max()  # Check for highest variance in a 30 day period
+    m_df = df.rolling(x).mean()
+    m_df.reset_index(inplace=True)
 
-    l_v_w = df_w.varian.min()  # Check for lowest variance in a week
-    l_v_m = df_m.varian.min()  # Check for lowest variance in a month
-    l_v_sd = df_sd.varian.min()  # Check for lowest variance in a 7 day period
-    l_v_td = df_td.varian.min()  # Check for lowest variance in a 30 day period
+    md_df = df.rolling(x).median()
+    md_df.reset_index(inplace=True)
 
-    high_stp_day = str(df[df['num_steps'] == m_s_d]['start_date'].values)[
-        2:12]  # Gets the date
-    low_stp_day = str(df[df['num_steps'] == l_s_d]['start_date'].values)[
-        2:12]  # Gets the date
+    std_df = df.rolling(x).std()
+    std_df.reset_index(inplace=True)
 
-    high_stp_week = str(df_w[df_w['num_steps'] == m_s_w][
-                        'week_dates'].values)[2:12]  # Gets the week dates
-    high_var_week = str(df_w[df_w['num_steps'] == m_v_w][
-                        'week_dates'].values)[2:12]  # Gets the week dates
-    ma_week = str(df_w[df_w['num_steps'] == m_sc_w]['week_dates'].values)[
-        2:12]  # Gets the week dates
+    s_df = df.rolling(x).sum()
+    s_df.reset_index(inplace=True)
 
-    low_stp_week = str(df_w[df_w['num_steps'] == l_s_w]
-                       ['week_dates'].values)[2:12]  # Gets the week dates
-    low_var_week = str(df_w[df_w['num_steps'] == l_v_w]
-                       ['week_dates'].values)[2:12]  # Gets the week dates
-    la_week = str(df_w[df_w['num_steps'] == l_sc_w]['week_dates'].values)[
-        2:12]  # Gets the week dates
+    min_df = df.rolling(x).min()
+    min_df.reset_index(inplace=True)
 
-    high_stp_month = str(df_m[df_m['num_steps'] == m_s_m][
-                         'month'].values)[2:12]  # Gets the month name & year
-    high_var_month = str(df_m[df_m['num_steps'] == m_v_m][
-                         'month'].values)[2:12]  # Gets the month name & year
-    ma_month = str(df_m[df_m['num_steps'] == l_v_m]['month'].values)[
-        2:12]  # Gets the month name & year
+    max_df = df.rolling(x).max()
+    max_df.reset_index(inplace=True)
 
-    low_stp_month = str(df_w[df_w['num_steps'] == m_sc_m][
-                        'week_dates'].values)[2:12]  # Gets the month name & year
-    low_var_month = str(df_m[df_m['num_steps'] == l_s_m]['month'].values)[
-        2:12]  # Gets the month name & year
-    la_month = str(df_m[df_m['num_steps'] == l_sc_m]
-                   ['week_dates'].values)[2:12]  # Gets the month name & year
+    m_df = drop_change_rename_df(m_df, x, 'mean_')
+    md_df = drop_change_rename_df(md_df, x, 'median_')
+    merged_df_uno = pd.merge(m_df, md_df, on=m_df.index)
 
-    high_stp_twfr_hour = str(df_tf[df_tf['num_steps'] == m_s_tf][
-                             'start_date'].values)[2:12]  # Gets the dates of the 24 hour period
-    low_stp_twfr_hour = str(df_tf[df_tf['num_steps'] == l_s_tf][
-                            'start_date'].values)[2:12]  # Gets the dates of the 24 hour period
+    std_df = drop_change_rename_df(std_df, x, 'std_')
+    s_df = drop_change_rename_df(s_df, x, 'total_')
+    merged_df_dos = pd.merge(std_df, s_df, on=std_df.index)
 
-    high_stp_seven_day = str(df_sd[df_sd['num_steps'] == m_s_sd][
-                             'week_dates'].values)[2:12]  # Gets the dates of the 7 day period
-    high_var_seven_day = str(df_sd[df_sd['num_steps'] == m_v_sd][
-                             'week_dates'].values)[2:12]  # Gets the dates of the 7 day period
-    ma_seven_day = str(df_sd[df_sd['num_steps'] == m_sc_sd][
-                       'week_dates'].values)[2:12]  # Gets the dates of the 7 day period
-    low_stp_seven_day = str(df_sd[df_sd['num_steps'] == l_s_sd][
-                            'week_dates'].values)[2:12]  # Gets the dates of the 7 day period
-    low_var_seven_day = str(df_sd[df_sd['num_steps'] == l_v_sd][
-                            'week_dates'].values)[2:12]  # Gets the dates of the 7 day period
-    la_seven_day = str(df_sd[df_sd['num_steps'] == l_sc_sd][
-                       'week_dates'].values)[2:12]  # Gets the dates of the 7 day period
+    min_df = drop_change_rename_df(min_df, x, 'min_')
+    max_df = drop_change_rename_df(max_df, x, 'max_')
+    merged_df_tres = pd.merge(min_df, max_df, on=min_df.index)
 
-    high_stp_thirty_day = str(df_td[df_td['num_steps'] == m_s_td][
-                              'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
-    high_var_thirty_day = str(df_td[df_td['num_steps'] == m_v_td][
-                              'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
-    ma_thirty_day = str(df_td[df_td['num_steps'] == m_sc_td][
-                        'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
-    low_stp_thirty_day = str(df_td[df_td['num_steps'] == l_s_td][
-                             'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
-    low_var_thirty_day = str(df_td[df_td['num_steps'] == l_v_td][
-                             'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
-    la_thirty_day = str(df_td[df_td['num_steps'] == l_sc_td][
-                        'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
+    merged_df_quatro = pd.merge(merged_df_uno, merged_df_dos, 
+                                on=merged_df_uno.index)
 
-    '''This creates a dictionary of all the values, so they are easy to display.'''
-    result = {'most_steps_day': [high_stp_day, m_s_d],
+    merged_df_finale = pd.merge(merged_df_quatro, merged_df_tres,
+                                on=merged_df_tres.index)
 
-              'least_steps_day': [low_stp_day, l_s_d],
+    merged_df_finale.drop(columns=['key_0_y'], inplace=True)
 
-              'most_steps_week': [high_stp_week, m_s_w],
-              'highest_variance_week': [high_var_week, m_v_w],
-              'most_active_week': [ma_week, m_sc_w],
+    merged_df_finale['steps_score_mean'] = merged_df_finale['mean_num_steps'] / \
+        merged_df_finale['std_num_steps']
 
-              'least_steps_week': [low_stp_week, l_s_w],
-              'lowest_variance_week': [low_var_week, l_v_w],
-              'least_active_week': [la_week, l_sc_w],
+    merged_df_finale['steps_score_median'] = merged_df_finale['median_num_steps'] / \
+        merged_df_finale['std_num_steps']
 
-              'most_steps_month': [high_stp_month, m_s_m],
-              'highest_var_month': [high_var_month, m_v_m],
-              'most_active_month': [ma_month, m_sc_m],
+    merged_df_finale.reset_index(inplace=True)
+    
+    merged_df_finale.drop(columns=['index', 'key_0'], inplace=True)
 
-              'least_steps_month': [low_stp_month, l_s_m],
-              'lowest_var_month': [low_var_month, l_v_m],
-              'least_active_month': [la_month, l_sc_m],
-
-              'most_steps_tf_hours': [high_stp_twfr_hour, m_s_tf],
-              'least_steps_tf_hours': [low_stp_twfr_hour, l_s_tf],
-
-              'most_steps_seven_days': [high_stp_seven_day, m_s_sd],
-              'highest_var_seven_days': [high_var_seven_day, m_v_sd],
-              'most_active_seven_days': [ma_seven_day, m_sc_sd],
-
-              'least_steps_seven_days': [low_stp_seven_day, l_s_sd],
-              'lowest_var_seven_days': [low_var_seven_day, l_v_sd],
-              'least_active_seven_days': [la_seven_day, l_sc_sd],
-
-              'most_steps_thirty_days': [high_stp_thirty_day, m_s_td],
-              'highest_var_thirty_days': [high_var_thirty_day, m_v_td],
-              'most_active_thirty_days': [ma_thirty_day, m_sc_td],
-
-              'least_steps_thirty_days': [low_stp_thirty_day, l_s_td],
-              'lowest_var_thirty_days': [low_var_thirty_day, l_v_td],
-              'least_active_thirty_days': [la_thirty_day, l_sc_td]
-              }
-
-    return result
+    return merged_df_finale

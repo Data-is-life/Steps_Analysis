@@ -87,8 +87,8 @@ def remove_overlap_time_rows(df):
 
 def print_remaining(df, df_name):
     '''This is just to check how many rows are left in the dataframe,
-    sum of total distance or steps, and how many instances are left that start
-    on one day and finishes another day.'''
+       sum of total distance or steps, and how many instances are left that
+       start on one day and finishes another day.'''
 
     print(f'Total Rows = {len(df)}')
     print(f'Total ' + df_name + ' = {df.tot_dist.sum()}')

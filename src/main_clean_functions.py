@@ -14,8 +14,6 @@ from all_steps_functions import trim_steps_from_overlapping_times
 
 from common_cleaning_functions import clean_duration
 from common_cleaning_functions import remove_overlap_time_rows
-# from common_cleaning_functions import print_remaining
-# from common_cleaning_functions import print_all_info
 from common_cleaning_functions import reset_distance_uno
 from common_cleaning_functions import reset_distance_dos
 from common_cleaning_functions import reset_steps_uno
@@ -66,7 +64,7 @@ def steps_clean_function(soup):
     return df
 
 
-def main_clean_function(soup):
+def distance_clean_function(soup):
     '''This function takes all ther other functions and puts it together.'''
 
     dist_df = clean_distance_data(soup)  # Step 1: create a df from xml data

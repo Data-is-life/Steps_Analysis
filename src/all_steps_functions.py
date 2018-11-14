@@ -5,7 +5,7 @@
 import pandas as pd
 from bs4 import BeautifulSoup
 
-def clean_data(soup):
+def clean_steps_data(soup):
     '''Step 1:
        Using Pandas to get a dataframe of all the values.'''
 
