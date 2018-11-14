@@ -82,15 +82,12 @@ def create_combined_daily_df(stp_df, dst_df):
        So, group it by start and end date, they should be the same
        get rid of start_time, end_time, and duration columns.'''
 
-    stp_df.drop(columns=['start_time', 'end_time', 'duration'], inplace=True)
-    dst_df.drop(columns=['start_time', 'end_time', 'duration'], inplace=True)
-
     daily_stp_df = stp_df.groupby(by=['start_date', 'end_date']).sum()
     daily_dst_df = dst_df.groupby(by=['start_date', 'end_date']).sum()
 
-    daily_stp_df.reset_index(inplace=True)
-    daily_dst_df.reset_index(inplace=True)
+    cmb_df = pd.concat([daily_stp_df, daily_dst_df], sort=False, axis=1)
+    cmb_df.loc[:, 'stp_per_ft'] = cmb_df.tot_dist*5280/cmb_df.num_steps
 
-    combined_df = pd.concat([daily_stp_df, daily_dst_df], sort=False, axis=1)
+    cmb_df.reset_index(inplace=True)
 
-    return combined_df
+    return cmb_df
