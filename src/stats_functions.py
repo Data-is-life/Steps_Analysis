@@ -3,6 +3,7 @@
 # Git-Hub: Data-is-Life
 
 import pandas as pd
+import numpy as np
 import re
 from datetime import date, timedelta
 
@@ -32,7 +33,7 @@ def split_num_num(dyr):
 
 def get_weeks_dates(wky):
     '''The values for time period in the weekly summarized df are joined and
-       in week numbers. Using RegEx     and datetime to split them.
+       in week numbers. Using RegEx and datetime to split them.
        eg: 432017 to "2017-10-23 to 2017-10-29"'''
 
     wk_yr = re.split(r'(\d{2})', wky)
@@ -62,17 +63,17 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
        'Month', 'Week', 'Day of Week', or 'Day of Month'
 
        "s_by" is sort the by which score. It accepts the following strings:
-       'steps' or 'distance'
+       'steps', 'distance', or 'floors'
        '''
 
     if dwm.lower() == 'month':
         std_df = df.groupby(df['start_date'].dt.strftime('%B%Y'),
                             sort=False).std()
-        std_df.columns = ['std_steps', 'std_dist', 'std_fps']
+        std_df.columns = ['std_steps', 'std_dist', 'std_flrs', 'std_fps']
 
         mean_df = df.groupby(df['start_date'].dt.strftime('%B%Y'),
                              sort=False).mean()
-        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_fps']
+        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_flrs', 'mean_fps']
 
         score_df = pd.concat([std_df, mean_df], axis=1)
         score_df.reset_index(inplace=True)
@@ -85,11 +86,11 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
     elif dwm.lower() == 'day of week':
         std_df = df.groupby(df['start_date'].dt.strftime('%A%Y'),
                             sort=False).std()
-        std_df.columns = ['std_steps', 'std_dist', 'std_fps']
+        std_df.columns = ['std_steps', 'std_dist', 'std_flrs', 'std_fps']
 
         mean_df = df.groupby(df['start_date'].dt.strftime('%A%Y'),
                              sort=False).mean()
-        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_fps']
+        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_flrs', 'mean_fps']
 
         score_df = pd.concat([std_df, mean_df], axis=1)
         score_df.reset_index(inplace=True)
@@ -102,11 +103,11 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
     elif dwm.lower() == 'day of month':
         std_df = df.groupby(df['start_date'].dt.strftime('%d%Y'),
                             sort=False).std()
-        std_df.columns = ['std_steps', 'std_dist', 'std_fps']
+        std_df.columns = ['std_steps', 'std_dist', 'std_flrs', 'std_fps']
 
         mean_df = df.groupby(df['start_date'].dt.strftime('%d%Y'),
                              sort=False).mean()
-        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_fps']
+        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_flrs', 'mean_fps']
 
         score_df = pd.concat([std_df, mean_df], axis=1)
         score_df.reset_index(inplace=True)
@@ -118,11 +119,11 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
     elif dwm.lower() == 'week':
         std_df = df.groupby(df['start_date'].dt.strftime('%U%Y'),
                             sort=False).std()
-        std_df.columns = ['std_steps', 'std_dist', 'std_fps']
+        std_df.columns = ['std_steps', 'std_dist', 'std_flrs', 'std_fps']
 
         mean_df = df.groupby(df['start_date'].dt.strftime('%U%Y'),
                              sort=False).mean()
-        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_fps']
+        mean_df.columns = ['mean_steps', 'mean_dist', 'mean_flrs', 'mean_fps']
 
         score_df = pd.concat([std_df, mean_df], axis=1)
         score_df.reset_index(inplace=True)
@@ -137,14 +138,19 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
 
     score_df.loc[:, 'steps_score'] = (score_df[
         'mean_steps']**2) / score_df['std_steps']
-    score_df.loc[:, 'dist_score'] = score_df[
-        'mean_dist'] / score_df['std_dist']
+    score_df.loc[:, 'dist_score'] = (score_df[
+        'mean_dist']**2) / score_df['std_dist']
+    score_df.loc[:, 'floors_score'] = np.where(score_df['std_flrs'] >= 1e-4, (
+        score_df['mean_flrs']**2) / score_df['std_flrs'], 0)
 
     if s_by.lower() == 'steps':
         score_df.sort_values(by='steps_score', ascending=False, inplace=True)
 
     elif s_by.lower() == 'distance':
         score_df.sort_values(by='dist_score', ascending=False, inplace=True)
+
+    elif s_by.lower() == 'floors':
+        score_df.sort_values(by='floors_score', ascending=False, inplace=True)
 
     else:
         return 'Please enter "steps" or "distance"'
@@ -168,8 +174,10 @@ def drop_change_rename_df(df, x, func_typ):
     df.loc[:, 'start_date'] = df[
         'end_date'] - pd.Timedelta(x, unit='D')
 
-    df.rename(columns={'num_steps': func_typ + 'num_steps',
-                       'tot_dist': func_typ + 'tot_dist'},inplace=True)
+    df.rename(columns={'num_steps': func_typ + 'steps',
+                       'tot_dist': func_typ + 'dist',
+                       'num_floors': func_typ + 'floors'},
+              inplace=True)
 
     df.set_index(['start_date', 'end_date'], inplace=True)    
 
