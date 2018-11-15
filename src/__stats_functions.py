@@ -106,13 +106,11 @@ def all_interesting_stats(df, df_w, df_m, df_tf, df_sd, df_td):
 
     '''This creates a dictionary of all the values, so they are easy to display.'''
     result = {'most_steps_day': [high_stp_day, m_s_d],
-
               'least_steps_day': [low_stp_day, l_s_d],
 
               'most_steps_week': [high_stp_week, m_s_w],
               'highest_variance_week': [high_var_week, m_v_w],
               'most_active_week': [ma_week, m_sc_w],
-
               'least_steps_week': [low_stp_week, l_s_w],
               'lowest_variance_week': [low_var_week, l_v_w],
               'least_active_week': [la_week, l_sc_w],

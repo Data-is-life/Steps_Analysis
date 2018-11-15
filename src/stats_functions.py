@@ -42,11 +42,11 @@ def get_weeks_dates(wky):
 
     d = date(yr, 1, 1)
 
-    if(d.weekday() <= 3):
+    if(d.weekday() < 0):
         d = d - timedelta(d.weekday())
 
     else:
-        d = d + timedelta(7 - d.weekday())
+        d = d + timedelta(6 - d.weekday())
 
     dlt = timedelta(days=(wk - 1) * 7)
 
@@ -54,15 +54,16 @@ def get_weeks_dates(wky):
     return dts
 
 
-def get_stats_day_week_month(df, dwm):
+def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
     '''This function is for summarizing df for desired timeframe.
        It returns the df sorted by the score for the specified timeframe.
 
-       It accepts the following time frames:
-       Month
-       Week
-       Day of Week
-       Day of Month'''
+       "dwm" is timeframe. It accepts the following strings:
+       'Month', 'Week', 'Day of Week', or 'Day of Month'
+
+       "s_by" is sort the by which score. It accepts the following strings:
+       'steps' or 'distance'
+       '''
 
     if dwm.lower() == 'month':
         std_df = df.groupby(df['start_date'].dt.strftime('%B%Y'),
@@ -134,72 +135,84 @@ def get_stats_day_week_month(df, dwm):
     else:
         return 'Please enter "month", "week", "day of week", or "day of month"'
 
-    score_df.loc[:, 'score'] = score_df['mean_stp'] / score_df['std_stp']
-    score_df.sort_values(by='score', ascending=False, inplace=True)
+    score_df.loc[:, 'steps_score'] = (score_df[
+        'mean_steps']**2) / score_df['std_steps']
+    score_df.loc[:, 'dist_score'] = score_df[
+        'mean_dist'] / score_df['std_dist']
+
+    if s_by.lower() == 'steps':
+        score_df.sort_values(by='steps_score', ascending=False, inplace=True)
+
+    elif s_by.lower() == 'distance':
+        score_df.sort_values(by='dist_score', ascending=False, inplace=True)
+
+    else:
+        return 'Please enter "steps" or "distance"'
+
+    score_df.reset_index(inplace=True)
+    score_df.drop(columns=['index'], inplace=True)
 
     return score_df
 
 
 def drop_change_rename_df(df, x, func_typ):
+    '''This function is a real timesaver. It trims the rows, drops columns
+       not needed, renames columns based on the function, and sets index
+       to start and end date. Otherwise, the following 13 lines would have
+       to be re-entered after every operation. :)''' 
 
-    func_df = df.drop(df.index[list(range(x - 1))])
-    func_df.reset_index(inplace=True)
-    func_df.loc[:, 'start_date'] = func_df['end_date'] - pd.Timedelta(x, unit='D')
-    func_df.rename(columns={'num_steps': func_typ + 'num_steps'}, inplace=True)
-    func_df.set_index(['start_date', 'end_date'], inplace=True)
+    df = df[x:].copy()
+    df.reset_index(inplace=True)
+    df.drop(columns=['index', 'ft_per_step'], inplace=True)
 
-    return func_df
+    df.loc[:, 'start_date'] = df[
+        'end_date'] - pd.Timedelta(x, unit='D')
+
+    df.rename(columns={'num_steps': func_typ + 'num_steps',
+                       'tot_dist': func_typ + 'tot_dist'},inplace=True)
+
+    df.set_index(['start_date', 'end_date'], inplace=True)    
+
+    return df
 
 
 def rolling_day_df(df, x):
+    '''I would like to rename this function later and call it the custom stat
+       or something. This function does what iHealth won't do, which is give
+       the user stats for any timeframe.
+       x is the number of days of rolling stats.''' 
+
     df.set_index(['start_date', 'end_date'], inplace=True)
 
-    m_df = df.rolling(x).mean()
-    m_df.reset_index(inplace=True)
+    mean_df = df.rolling(x).mean()
+    mean_df.reset_index(inplace=True)
+    mean_df = drop_change_rename_df(mean_df, x, 'mean_')
 
-    md_df = df.rolling(x).median()
-    md_df.reset_index(inplace=True)
+    median_df = df.rolling(x).median()
+    median_df.reset_index(inplace=True)
+    median_df = drop_change_rename_df(median_df, x, 'median_')
 
     std_df = df.rolling(x).std()
     std_df.reset_index(inplace=True)
+    std_df = drop_change_rename_df(std_df, x, 'std_')
 
-    s_df = df.rolling(x).sum()
-    s_df.reset_index(inplace=True)
+    sum_df = df.rolling(x).sum()
+    sum_df.reset_index(inplace=True)
+    sum_df = drop_change_rename_df(sum_df, x, 'total_')
 
     min_df = df.rolling(x).min()
     min_df.reset_index(inplace=True)
+    min_df = drop_change_rename_df(min_df, x, 'min_')
 
     max_df = df.rolling(x).max()
     max_df.reset_index(inplace=True)
-
-    m_df = drop_change_rename_df(m_df, x, 'mean_')
-    md_df = drop_change_rename_df(md_df, x, 'median_')
-    merged_df_uno = pd.merge(m_df, md_df, on=m_df.index)
-
-    std_df = drop_change_rename_df(std_df, x, 'std_')
-    s_df = drop_change_rename_df(s_df, x, 'total_')
-    merged_df_dos = pd.merge(std_df, s_df, on=std_df.index)
-
-    min_df = drop_change_rename_df(min_df, x, 'min_')
     max_df = drop_change_rename_df(max_df, x, 'max_')
-    merged_df_tres = pd.merge(min_df, max_df, on=min_df.index)
 
-    merged_df_quatro = pd.merge(merged_df_uno, merged_df_dos,
-                                on=merged_df_uno.index)
+    merged_df = pd.concat([mean_df, median_df, std_df,
+                           sum_df, min_df, max_df], axis=1)
 
-    merged_df_finale = pd.merge(merged_df_quatro, merged_df_tres,
-                                on=merged_df_tres.index)
+    merged_df.reset_index(inplace=True)
 
-    merged_df_finale.drop(columns=['key_0_y'], inplace=True)
+    df.reset_index(inplace=True)
 
-    merged_df_finale['steps_score_mean'] = merged_df_finale['mean_num_steps'] / \
-        merged_df_finale['std_num_steps']
-
-    merged_df_finale['steps_score_median'] = merged_df_finale['median_num_steps'] / \
-        merged_df_finale['std_num_steps']
-
-    merged_df_finale.reset_index(inplace=True)
-
-    merged_df_finale.drop(columns=['index', 'key_0'], inplace=True)
-
-    return merged_df_finale
+    return merged_df
