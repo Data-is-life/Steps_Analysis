@@ -80,13 +80,13 @@ def main_clean_function(file_name):
 def create_combined_daily_df(stp_df, dst_df):
     '''To run stats, first thing to do is get total for each day.
        So, group it by start and end date, they should be the same
-       get rid of start_time, end_time, and duration columns.'''
+       Also, add a column feet/steps'''
 
     daily_stp_df = stp_df.groupby(by=['start_date', 'end_date']).sum()
     daily_dst_df = dst_df.groupby(by=['start_date', 'end_date']).sum()
 
     cmb_df = pd.concat([daily_stp_df, daily_dst_df], sort=False, axis=1)
-    cmb_df.loc[:, 'stp_per_ft'] = cmb_df.tot_dist*5280/cmb_df.num_steps
+    cmb_df.loc[:, 'ft_per_step'] = cmb_df.tot_dist * 5280 / cmb_df.num_steps
 
     cmb_df.reset_index(inplace=True)
 
