@@ -32,7 +32,7 @@ def split_num_num(dyr):
 
 def get_weeks_dates(wky):
     '''The values for time period in the weekly summarized df are joined and
-       in week numbers. Using RegEx and datetime to split them.
+       in week numbers. Using RegEx     and datetime to split them.
        eg: 432017 to "2017-10-23 to 2017-10-29"'''
 
     wk_yr = re.split(r'(\d{2})', wky)
