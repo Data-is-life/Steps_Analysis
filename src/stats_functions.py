@@ -13,7 +13,7 @@ def split_str_num(dmyr):
        eg: Monday2017 to Monday 2017
            March2018  to March 2018'''
 
-    nmy = re.split('(\d+)', dmyr)
+    nmyr = re.split(r'(\d+)', dmyr)
     dm = nmyr[0]
     yr = nmyr[1]
     return dm + ' ' + yr
@@ -24,7 +24,7 @@ def split_num_num(dyr):
        joined. Using RegEx to split them.
        eg: 012017 to 01-2017'''
 
-    d_yr = re.split('(\d{2})', wky)
+    d_yr = re.split(r'(\d{2})', dyr)
     d = d_yr[1]
     yr = d_yr[3] + d_yr[5]
     return d + '-' + yr
@@ -35,7 +35,7 @@ def get_weeks_dates(wky):
        in week numbers. Using RegEx and datetime to split them.
        eg: 432017 to "2017-10-23 to 2017-10-29"'''
 
-    wk_yr = re.split('(\d{2})', wky)
+    wk_yr = re.split(r'(\d{2})', wky)
 
     wk = int(wk_yr[1])
     yr = int(wk_yr[3] + wk_yr[5])
@@ -142,16 +142,13 @@ def get_stats_day_week_month(df, dwm):
 
 def drop_change_rename_df(df, x, func_typ):
 
-    df.drop(df.index[list(range(x - 1))], inplace=True)
-    df.reset_index(inplace=True)
-#     df.drop(columns=['index'], inplace=True)
-    df.loc[:, 'start_date'] = df['end_date'] - pd.Timedelta(x, unit='D')
-    df.rename(columns={'num_steps': func_typ + 'num_steps'}, inplace=True)
-    if 'index' in df.columns:
-        df.drop(columns=['index'], inplace=True)
-    df.set_index(['start_date', 'end_date'], inplace=True)
+    func_df = df.drop(df.index[list(range(x - 1))])
+    func_df.reset_index(inplace=True)
+    func_df.loc[:, 'start_date'] = func_df['end_date'] - pd.Timedelta(x, unit='D')
+    func_df.rename(columns={'num_steps': func_typ + 'num_steps'}, inplace=True)
+    func_df.set_index(['start_date', 'end_date'], inplace=True)
 
-    return df
+    return func_df
 
 
 def rolling_day_df(df, x):
