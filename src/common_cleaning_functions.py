@@ -55,11 +55,11 @@ def clean_columns_conv_to_numeric(steps_df, dist_df, floors_df, dur_stp_df, dur_
     flr_df = pd.concat([floors_df, dur_flt_df], axis=1)
 
     stp_df = stp_df[['start_date', 'start_time', 'end_date', 'end_time',
-                     'num_steps', 'duration', 'source']]
+                     'num_steps', 'duration', 'source']].copy()
     dst_df = dst_df[['start_date', 'start_time', 'end_date', 'end_time',
-                     'tot_dist', 'duration', 'source']]
+                     'tot_dist', 'duration', 'source']].copy()
     flr_df = flr_df[['start_date', 'start_time', 'end_date', 'end_time',
-                     'num_floors', 'duration', 'source']]
+                     'num_floors', 'duration', 'source']].copy()
 
     stp_df = reset_steps_uno(stp_df)
     dst_df = reset_distance_uno(dst_df)
