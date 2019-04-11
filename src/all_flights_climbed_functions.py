@@ -4,6 +4,7 @@
 
 import pandas as pd
 
+
 def clean_flights_data(soup):
     '''Step 1:
        Using Pandas to get a dataframe of all the values.'''
@@ -15,7 +16,7 @@ def clean_flights_data(soup):
     source_col = []
 
     flights = soup.findAll('Record',
-                         {'type': 'HKQuantityTypeIdentifierFlightsClimbed'})
+                           {'type': 'HKQuantityTypeIdentifierFlightsClimbed'})
 
     for num in flights:
         start_date_col.append(num['startDate'])
@@ -44,9 +45,7 @@ def split_num_flights_between_days(df):
        starts on one day and finishes the following or more days from that
        time.'''
 
-    i = 0
-    while i < len(df) - 1:
-
+    for i in range(len(df) - 1):
         if (df.end_date[i] - pd.Timedelta(1, unit='D') == df.start_date[i]):
 
             st_dt, st_tm, end_dt, end_tm, num_st, dur, sauce = df.iloc[i]
@@ -64,8 +63,6 @@ def split_num_flights_between_days(df):
 
             df.reset_index(inplace=True)
             df.drop(columns=['index'], inplace=True)
-
-            i += 1
 
         elif (df.end_date[i] - pd.Timedelta(2, unit='D') == df.start_date[i]):
 
@@ -88,11 +85,6 @@ def split_num_flights_between_days(df):
             df.reset_index(inplace=True)
             df.drop(columns=['index'], inplace=True)
 
-            i += 1
-
-        else:
-            i += 1
-
     return df
 
 
@@ -111,10 +103,9 @@ def trim_flights_climbed_from_overlapping_times(df):
        Once the number of floors climbed are trimmed, if the remaining floors
        climbed are less than 0.01, drop the row.'''
 
-    i = 0
-    while i < len(df) - 1:
+    for i in range(len(df) - 1):
         if (df.start_date[i] == df.end_date[i]) and (
-                df.start_date[i] == df.end_date[i + 1]) and(
+                df.start_date[i] == df.end_date[i + 1]) and (
                 df.start_date[i] == df.start_date[i + 1]) and (
                 df.start_time[i + 1] <= df.end_time[i]) and (
                 df.end_time[i + 1] >= df.end_time[i]):
@@ -122,20 +113,16 @@ def trim_flights_climbed_from_overlapping_times(df):
             flights_per_hour = df.num_floors[
                 i + 1] / (df.end_time[i + 1] - df.start_time[i + 1])
 
-            floors_adjust = (df.end_time[i] -
-                            df.start_time[i + 1]) * flights_per_hour
+            floors_adjust = (df.end_time[i] - df.start_time[i + 1]
+                             ) * flights_per_hour
 
             floors_adjust = round(floors_adjust)
 
-            df.loc[(i + 1), 'num_floors'] = df.num_floors[i + 1] - floors_adjust
+            df.loc[(i + 1), 'num_floors'] = df.num_floors[i + 1] - \
+                floors_adjust
             df.loc[(i + 1), 'start_time'] = df.end_time[i]
             df.loc[(i + 1), 'duration'] = df.end_time[i + 1] - \
                 df.start_time[i + 1]
 
             df.loc[i, 'duration'] = df.end_time[i] - df.start_time[i]
-            i += 1
-
-        else:
-            i += 1
-
     return df

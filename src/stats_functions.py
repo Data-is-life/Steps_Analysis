@@ -56,10 +56,10 @@ def get_weeks_dates(wky):
 
 
 def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
-    '''This function is for summarizing df for desired timeframe.
-       It returns the df sorted by the score for the specified timeframe.
+    '''This function is for summarizing df for desired time-frame.
+       It returns the df sorted by the score for the specified time-frame.
 
-       "dwm" is timeframe. It accepts the following strings:
+       "dwm" is time-frame. It accepts the following strings:
        'Month', 'Week', 'Day of Week', or 'Day of Month'
 
        "s_by" is sort the by which score. It accepts the following strings:
@@ -153,7 +153,7 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
         score_df.sort_values(by='floors_score', ascending=False, inplace=True)
 
     else:
-        return 'Please enter "steps" or "distance"'
+        return 'Please enter "steps", "distance", or "floors"'
 
     score_df.reset_index(inplace=True)
     score_df.drop(columns=['index'], inplace=True)
@@ -162,10 +162,10 @@ def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
 
 
 def drop_change_rename_df(df, x, func_typ):
-    '''This function is a real timesaver. It trims the rows, drops columns
+    '''This function is a real time saver. It trims the rows, drops columns
        not needed, renames columns based on the function, and sets index
        to start and end date. Otherwise, the following 13 lines would have
-       to be re-entered after every operation. :)''' 
+       to be re-entered after every operation. :)'''
 
     df = df[x:].copy()
     df.reset_index(inplace=True)
@@ -179,7 +179,7 @@ def drop_change_rename_df(df, x, func_typ):
                        'num_floors': func_typ + 'floors'},
               inplace=True)
 
-    df.set_index(['start_date', 'end_date'], inplace=True)    
+    df.set_index(['start_date', 'end_date'], inplace=True)
 
     return df
 
@@ -187,8 +187,8 @@ def drop_change_rename_df(df, x, func_typ):
 def rolling_day_df(df, x):
     '''I would like to rename this function later and call it the custom stat
        or something. This function does what iHealth won't do, which is give
-       the user stats for any timeframe.
-       x is the number of days of rolling stats.''' 
+       the user stats for any time-frame.
+       x is the number of days of rolling stats.'''
 
     df.set_index(['start_date', 'end_date'], inplace=True)
 

@@ -38,7 +38,8 @@ def clean_duration(df):
     return dur_df
 
 
-def clean_columns_conv_to_numeric(steps_df, dist_df, floors_df, dur_stp_df, dur_dst_df, dur_flt_df):
+def clean_columns_conv_to_numeric(steps_df, dist_df, floors_df, dur_stp_df,
+                                  dur_dst_df, dur_flt_df):
     '''Step : 3
        First combine duration dataframe and the dataframe with all the values.
        Second keep only the columns needed.
@@ -155,11 +156,11 @@ def print_all_info(df):
 
 
 def reset_distance_uno(df):
-    '''Found this convinient, since removing and adding rows every function
+    '''Found this convenient, since removing and adding rows every function
        could lead to missing indexes and data not being in correct order.'''
 
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df = df[df['tot_dist'] > 1e-4]
+    df = df[df['tot_dist'] > 1e-4].copy()
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
                                      (df['end_time'] - df['start_time']),
                                      df['duration'])
@@ -171,11 +172,11 @@ def reset_distance_uno(df):
 
 
 def reset_distance_dos(df):
-    '''Found this convinient, since removing and adding rows every function
+    '''Found this convenient, since removing and adding rows every function
        could lead to missing indexes and data not being in correct order.'''
 
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df = df[df['duration'] > 5e-4]
+    df = df[df['duration'] > 5e-4].copy()
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
                                      (df['end_time'] - df['start_time']),
                                      df['duration'])
@@ -187,11 +188,11 @@ def reset_distance_dos(df):
 
 
 def reset_steps_uno(df):
-    '''Found this convinient, since removing and adding rows every function
+    '''Found this convenient, since removing and adding rows every function
        could lead to missing indexes and data not being in correct order.'''
 
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df = df[df['num_steps'] > 0.4444]
+    df = df[df['num_steps'] > 0.4444].copy()
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
                                      (df['end_time'] - df['start_time']),
                                      df['duration'])
@@ -202,11 +203,11 @@ def reset_steps_uno(df):
 
 
 def reset_steps_dos(df):
-    '''Found this convinient, since removing and adding rows every function
+    '''Found this convenient, since removing and adding rows every function
        could lead to missing indexes and data not being in correct order.'''
 
     df.sort_values(by=['start_date', 'end_time'], inplace=True)
-    df = df[df['num_steps'] > 0.4444]
+    df = df[df['num_steps'] > 0.4444].copy()
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
                                      (df['end_time'] - df['start_time']),
                                      df['duration'])
@@ -216,11 +217,11 @@ def reset_steps_dos(df):
     return df
 
 def reset_floors_uno(df):
-    '''Found this convinient, since removing and adding rows every function
+    '''Found this convenient, since removing and adding rows every function
        could lead to missing indexes and data not being in correct order.'''
 
     df.sort_values(by=['start_date', 'start_time'], inplace=True)
-    df = df[df['num_floors'] > 0]
+    df = df[df['num_floors'] > 0].copy()
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
                                      (df['end_time'] - df['start_time']),
                                      df['duration'])
@@ -231,11 +232,11 @@ def reset_floors_uno(df):
 
 
 def reset_floors_dos(df):
-    '''Found this convinient, since removing and adding rows every function
+    '''Found this convenient, since removing and adding rows every function
        could lead to missing indexes and data not being in correct order.'''
 
     df.sort_values(by=['start_date', 'end_time'], inplace=True)
-    df = df[df['num_floors'] > 0]
+    df = df[df['num_floors'] > 0].copy()
     df.loc[:, 'duration'] = np.where(df['start_date'] == df['end_date'],
                                      (df['end_time'] - df['start_time']),
                                      df['duration'])

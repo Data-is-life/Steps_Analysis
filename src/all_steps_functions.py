@@ -45,7 +45,7 @@ def split_steps_between_days(df):
        and finishes the following or more days from that time.'''
 
     i = 0
-    while i < len(df) - 1:
+    for i in range(len(df) - 1):
 
         if (df.end_date[i] - pd.Timedelta(1, unit='D') == df.start_date[i]):
 
@@ -64,8 +64,6 @@ def split_steps_between_days(df):
 
             df.reset_index(inplace=True)
             df.drop(columns=['index'], inplace=True)
-
-            i += 1
 
         elif (df.end_date[i] - pd.Timedelta(2, unit='D') == df.start_date[i]):
 
@@ -87,11 +85,6 @@ def split_steps_between_days(df):
 
             df.reset_index(inplace=True)
             df.drop(columns=['index'], inplace=True)
-
-            i += 1
-
-        else:
-            i += 1
 
     return df
 

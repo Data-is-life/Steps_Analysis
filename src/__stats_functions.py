@@ -1,6 +1,3 @@
-import pandas as pd
-
-
 def all_interesting_stats(df, df_w, df_m, df_tf, df_sd, df_td):
     '''This function checks most and least values for the day, month, week,
     rolling 7 days, and rolling 30 days'''
@@ -104,7 +101,8 @@ def all_interesting_stats(df, df_w, df_m, df_tf, df_sd, df_td):
     la_thirty_day = str(df_td[df_td['num_steps'] == l_sc_td][
                         'week_dates'].values)[2:12]  # Gets the dates of the 30 day period
 
-    '''This creates a dictionary of all the values, so they are easy to display.'''
+    '''This creates a dictionary of all the values, so they are easy to
+    display.'''
     result = {'most_steps_day': [high_stp_day, m_s_d],
               'least_steps_day': [low_stp_day, l_s_d],
 

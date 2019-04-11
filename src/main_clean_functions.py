@@ -14,7 +14,6 @@ from all_steps_functions import split_steps_between_days
 from all_steps_functions import trim_steps_from_overlapping_times
 
 from all_flights_climbed_functions import clean_flights_data
-from all_flights_climbed_functions import split_num_flights_between_days
 from all_flights_climbed_functions import trim_flights_climbed_from_overlapping_times
 
 from common_cleaning_functions import clean_duration
@@ -81,8 +80,8 @@ def main_clean_function(file_name):
     dst_df = reset_distance_dos(dst_df)
     flr_df = reset_floors_uno(flr_df)
 
-    stp_df = stp_df[stp_df['duration'] > 1.0e-5]
-    dst_df = dst_df[dst_df['duration'] > 1.0e-5]
+    stp_df = stp_df[stp_df['duration'] > 1.0e-5].copy()
+    dst_df = dst_df[dst_df['duration'] > 1.0e-5].copy()
 
     stp_df = reset_steps_dos(stp_df)
     stp_df = reset_steps_uno(stp_df)
