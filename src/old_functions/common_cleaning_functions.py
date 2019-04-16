@@ -4,12 +4,14 @@
 
 import pandas as pd
 import numpy as np
+from time import time
 
 
 def clean_start_end_times(df, s_o_e):
     '''Separate out end and start times to different dataframes and remove
        timezone. Also split the date and time to two different columns.'''
 
+    tt = time()
     d_df = df[(s_o_e + '_date')].str.split(' ', expand=True)
     d_df.columns = [(s_o_e + '_date'), (s_o_e + '_time'), 'time_zone']
 
@@ -18,6 +20,7 @@ def clean_start_end_times(df, s_o_e):
         d_df[s_o_e + '_date'], format='%Y/%m/%d')
 
     d_df.loc[:, s_o_e + '_time'] = pd.to_timedelta(d_df[s_o_e + '_time'])
+    print(f'clean_start_end_times {time()-tt}')
 
     return d_df
 
@@ -26,6 +29,7 @@ def clean_duration(df):
     '''Step : 2
        Create a new dataframe combining the start and end times.'''
 
+    tt = time()
     sd_df = clean_start_end_times(df, 'start')
     ed_df = clean_start_end_times(df, 'end')
     dur_df = pd.concat([sd_df, ed_df], axis=1)
@@ -34,6 +38,7 @@ def clean_duration(df):
     dur_df.loc[:, 'edt'] = dur_df['end_date'] + dur_df['end_time']
     dur_df.loc[:, 'duration'] = dur_df['edt'] - dur_df['sdt']
     dur_df.drop(columns=['sdt', 'edt'], inplace=True)
+    print(f'clean_duration {time()-tt}')
 
     return dur_df
 
@@ -47,6 +52,7 @@ def clean_columns_conv_to_numeric(steps_df, dist_df, floors_df, dur_stp_df,
        Fourth convert the time and duration to numeric values. numeric values.
        are a lot easier to work with than time deltas.'''
 
+    tt = time()
     steps_df.drop(columns=['start_date', 'end_date'], inplace=True)
     dist_df.drop(columns=['start_date', 'end_date'], inplace=True)
     floors_df.drop(columns=['start_date', 'end_date'], inplace=True)
@@ -66,27 +72,12 @@ def clean_columns_conv_to_numeric(steps_df, dist_df, floors_df, dur_stp_df,
     dst_df = reset_distance_uno(dst_df)
     flr_df = reset_floors_uno(flr_df)
 
-    stp_df.loc[:, 'start_time'] = pd.to_numeric(
-        stp_df['start_time']) / 3600000000000
-    stp_df.loc[:, 'end_time'] = pd.to_numeric(
-        stp_df['end_time']) / 3600000000000
-    stp_df.loc[:, 'duration'] = pd.to_numeric(
-        stp_df['duration']) / 3600000000000
-
-    dst_df.loc[:, 'start_time'] = pd.to_numeric(
-        dst_df['start_time']) / 3600000000000
-    dst_df.loc[:, 'end_time'] = pd.to_numeric(
-        dst_df['end_time']) / 3600000000000
-    dst_df.loc[:, 'duration'] = pd.to_numeric(
-        dst_df['duration']) / 3600000000000
-
-    flr_df.loc[:, 'start_time'] = pd.to_numeric(
-        flr_df['start_time']) / 3600000000000
-    flr_df.loc[:, 'end_time'] = pd.to_numeric(
-        flr_df['end_time']) / 3600000000000
-    flr_df.loc[:, 'duration'] = pd.to_numeric(
-        flr_df['duration']) / 3600000000000
-
+    cols_to_change = ['start_time', 'end_time', 'duration']
+    for col in cols_to_change:
+        stp_df.loc[:, col] = pd.to_numeric(stp_df[col]) / 3.6e12
+        dst_df.loc[:, col] = pd.to_numeric(dst_df[col]) / 3.6e12
+        flr_df.loc[:, col] = pd.to_numeric(flr_df[col]) / 3.6e12
+    print(f'clean_columns_conv_to_numeric {time()-tt}')
     return stp_df, dst_df, flr_df
 
 
@@ -108,22 +99,79 @@ def remove_overlap_time_rows(df):
        with the following rows.'''
 
     i = 0
-
+    tt = time()
     while i < len(df) - 1:
 
-        if (df.start_date[i] == df.end_date[i]) and (
-                df.start_date[i] == df.end_date[i + 1]) and (
-                df.start_date[i] == df.start_date[i + 1]) and (
-                df.start_time[i] <= df.start_time[i + 1]) and (
-                df.end_time[i] >= df.end_time[i + 1]):
+        if (df.start_time[i] <= df.start_time[i+1]) and (
+                df.end_time[i] >= df.end_time[i+1]) and (
+                       df.start_date[i] == df.start_date[i+1]) and (
+                                df.start_date[i] == df.end_date[i+1]) and (
+                                         df.start_date[i] == df.end_date[i]):
 
-            df.drop(index=(i + 1), inplace=True)
+            df.drop(index=(i+1), inplace=True)
             df.reset_index(inplace=True)
             df.drop(columns=['index'], inplace=True)
 
         else:
             i += 1
+    print(f'remove_overlap_time_rows {time()-tt}')
+    return df
 
+
+def trim_data_from_overlapping_times(sdf, ddf, fdf):
+    '''Step : 6
+       Correct total steps, distance, floors climbed, and times from
+       overlapping times.
+
+       To trim the data, making sure to check if start date for the same row
+       are the same, also the following row has the same starting and
+       ending date.
+
+       In addition, the starting time of the following row has to be less than
+       ending time for the row to check and the ending time for the following
+       row has to be greater.
+
+       Once the data is trimmed, the following logic is used to determine if
+       the row need to be dropped:
+       if the remaining steps or floors climbed are less than 0.4444,
+       if the remaining distance is less than 8e-5.
+
+       8e-5 miles = 0.4444 feet
+
+       Rounding 0.4444 to an integer will be 0.'''
+
+    i = 0
+    tt = time()
+    while i < len(df) - 1:
+        if (df.start_time[i] <= df.start_time[i+1]) and (
+                df.end_time[i] >= df.end_time[i+1]) and (
+                       df.start_date[i] == df.start_date[i+1]) and (
+                                df.start_date[i] == df.end_date[i+1]) and (
+                                         df.start_date[i] == df.end_date[i]):
+
+            stps_per_hr = sdf.num_steps[i+1] / (sdf.end_time[i+1] - sdf.start_time[i+1])
+            dist_per_hr = ddf.num_steps[i+1] / (ddf.end_time[i+1] - ddf.start_time[i+1])
+            flrs_per_hr = fdf.num_steps[i+1] / (fdf.end_time[i+1] - fdf.start_time[i+1])
+
+            steps_adjust = (df.end_time[i] - df.start_time[i+1]) * stps_per_hr
+            steps_adjust = (df.end_time[i] - df.start_time[i+1]) * stps_per_hr
+            steps_adjust = (df.end_time[i] - df.start_time[i+1]) * stps_per_hr
+            steps_adjust = round(steps_adjust)
+
+            df.loc[i+1, 'num_steps'] = df.num_steps[i+1] - steps_adjust
+            df.loc[i+1, 'start_time'] = df.end_time[i]
+            df.loc[i+1, 'duration'] = df.end_time[i+1] - df.start_time[i+1]
+            df.loc[i, 'duration'] = df.end_time[i] - df.start_time[i]
+
+            if df['num_steps'][i+1] > 0.4444:
+                df.drop(index=(i+1), inplace=True)
+                df.reset_index(inplace=True)
+                df.drop(columns=['index'], inplace=True)
+            else:
+                i += 1
+        else:
+            i += 1
+    print(f'trim_steps_from_overlapping_times {time()-tt}')
     return df
 
 
@@ -215,6 +263,7 @@ def reset_steps_dos(df):
     df.reset_index(inplace=True)
     df.drop(columns=['index'], inplace=True)
     return df
+
 
 def reset_floors_uno(df):
     '''Found this convenient, since removing and adding rows every function

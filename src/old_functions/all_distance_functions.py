@@ -3,9 +3,11 @@
 # Git-Hub: Data-is-Life
 
 import pandas as pd
+from time import time
 
 
 def clean_distance_data(soup):
+    tt = time()
     '''Step 1:
        Using Pandas to get a dataframe of all the values.'''
 
@@ -36,6 +38,7 @@ def clean_distance_data(soup):
     dist_df = dist_df[dist_df['tot_dist'] > 1e-4]
     dist_df.reset_index(inplace=True)
     dist_df.drop(columns=['index'], inplace=True)
+    print(f'clean_distance_data {time()-tt}')
 
     return dist_df
 
@@ -44,6 +47,7 @@ def split_distance_between_days(df):
     '''Step : 4
        Split distance between days, in case a measurement starts on one day
        and finishes the following or more days from that time.'''
+    tt = time()
     for i in range(len(df) - 1):
 
         if (df.end_date[i] - pd.Timedelta(1, unit='D') == df.start_date[i]):
@@ -87,7 +91,7 @@ def split_distance_between_days(df):
 
             df.reset_index(inplace=True)
             df.drop(columns=['index'], inplace=True)
-
+    print(f'split_distance_between_days {time()-tt}')
     return df
 
 
@@ -109,24 +113,22 @@ def trim_distance_from_overlapping_times(df):
        All distances are in miles. 1e-4 miles is equal to roughly 6 inches.'''
 
     i = 0
+    tt = time()
 
     while i < len(df) - 1:
+        if (df.start_time[i] <= df.start_time[i+1]) and (
+                df.end_time[i] >= df.end_time[i+1]) and (
+                       df.start_date[i] == df.start_date[i+1]) and (
+                                df.start_date[i] == df.end_date[i+1]) and (
+                                         df.start_date[i] == df.end_date[i]):
 
-        if (df.start_date[i] == df.end_date[i]) and (
-                df.start_date[i] == df.end_date[i + 1]) and(
-                df.start_date[i] == df.start_date[i + 1]) and (
-                df.start_time[i + 1] < df.end_time[i]) and (
-                df.end_time[i + 1] >= df.end_time[i]):
+            dist_per_hr = df.tot_dist[i+1] / (
+                    df.end_time[i+1] - df.start_time[i+1])
+            dist_adjust = (df.end_time[i] - df.start_time[i+1]) * dist_per_hr
 
-            dist_per_hour = df.tot_dist[i + 1] / \
-                (df.end_time[i + 1] - df.start_time[i + 1])
-            dist_adjust = (df.end_time[i] -
-                           df.start_time[i + 1]) * dist_per_hour
-
-            df.loc[(i + 1), 'tot_dist'] = df.tot_dist[i + 1] - dist_adjust
-            df.loc[(i + 1), 'start_time'] = df.end_time[i]
-            df.loc[(i + 1), 'duration'] = df.end_time[i + 1] - \
-                df.start_time[i + 1]
+            df.loc[i + 1, 'tot_dist'] = df.tot_dist[i+1] - dist_adjust
+            df.loc[i + 1, 'start_time'] = df.end_time[i]
+            df.loc[i + 1, 'duration'] = df.end_time[i+1] - df.start_time[i+1]
             df.loc[i, 'duration'] = df.end_time[i] - df.start_time[i]
 
             if df.tot_dist[i + 1] < 1e-4:
@@ -138,5 +140,5 @@ def trim_distance_from_overlapping_times(df):
 
         else:
             i += 1
-
+    print(f'trim_distance_from_overlapping_times {time()-tt}')
     return df
