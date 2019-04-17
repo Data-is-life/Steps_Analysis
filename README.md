@@ -84,7 +84,7 @@ The repository has the following structure.
 
 
 ```
-Copyright (c) 2018, Mohit Gangwani
+Copyright (c) 2019, Mohit Gangwani
 
 All rights reserved.
 
