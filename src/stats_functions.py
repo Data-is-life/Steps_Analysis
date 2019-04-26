@@ -7,52 +7,55 @@ import numpy as np
 import re
 from datetime import date, timedelta
 
+class StatsHelper(object):
+    """docstring for StatsHelper"""
+    def __init__(self, dmyr):
+        super(StatsHelper, self).__init__()
+        self.dmyr = dmyr
 
-def split_str_num(dmyr):
-    '''The values for time period in the monthly and day of the week summarized
-       df are combined. Using RegEx to split them.
-       eg: Monday2017 to Monday 2017
-           March2018  to March 2018'''
+    def split_str(self):
+        '''The values for time period in the monthly and day of the week summarized
+           df are combined. Using RegEx to split them.
+           eg: Monday2017 to Monday 2017
+               March2018  to March 2018'''
 
-    nmyr = re.split(r'(\d+)', dmyr)
-    dm = nmyr[0]
-    yr = nmyr[1]
-    return dm + ' ' + yr
+        nmyr = re.split(r'(\d+)', self.dmyr)
+        dm = nmyr[0]
+        yr = nmyr[1]
+        return f'{dm} {yr}'
 
+    def split_num(self):
+        '''The values for time period in the day of the month summarized df are
+           joined. Using RegEx to split them.
+           eg: 012017 to 01-2017'''
 
-def split_num_num(dyr):
-    '''The values for time period in the day of the month summarized df are
-       joined. Using RegEx to split them.
-       eg: 012017 to 01-2017'''
+        d_yr = re.split(r'(\d{2})', self.dmyr)
+        d = d_yr[1]
+        yr = d_yr[3] + d_yr[5]
+        return f'{d}-{yr}'
 
-    d_yr = re.split(r'(\d{2})', dyr)
-    d = d_yr[1]
-    yr = d_yr[3] + d_yr[5]
-    return d + '-' + yr
+    def get_weeks_dates(wky):
+        '''The values for time period in the weekly summarized df are joined and
+           in week numbers. Using RegEx and datetime to split them.
+           eg: 432017 to "2017-10-23 to 2017-10-29"'''
 
+        wk_yr = re.split(r'(\d{2})', wky)
 
-def get_weeks_dates(wky):
-    '''The values for time period in the weekly summarized df are joined and
-       in week numbers. Using RegEx and datetime to split them.
-       eg: 432017 to "2017-10-23 to 2017-10-29"'''
+        wk = int(wk_yr[1])
+        yr = int(wk_yr[3] + wk_yr[5])
 
-    wk_yr = re.split(r'(\d{2})', wky)
+        d = date(yr, 1, 1)
 
-    wk = int(wk_yr[1])
-    yr = int(wk_yr[3] + wk_yr[5])
+        if(d.weekday() < 0):
+            d -= timedelta(d.weekday())
 
-    d = date(yr, 1, 1)
+        else:
+            d += timedelta(6 - d.weekday())
 
-    if(d.weekday() < 0):
-        d = d - timedelta(d.weekday())
+        dlt = timedelta(days=(wk - 1) * 7)
 
-    else:
-        d = d + timedelta(6 - d.weekday())
-
-    dlt = timedelta(days=(wk - 1) * 7)
-
-    dts = f'{d + dlt} to {d + dlt + timedelta(days=6)}'
-    return dts
+        dts = f'{d + dlt} to {d + dlt + timedelta(days=6)}'
+        return dts
 
 
 def get_stats_day_week_month(df, dwm='n/a', s_by='n/a'):
