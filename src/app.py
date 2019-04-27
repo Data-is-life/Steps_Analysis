@@ -40,7 +40,7 @@ class TrimData(object):
         self.measure_unit = measure_unit
         self.one_day = ToTd(1, 'D')
         self.two_days = ToTd(2, 'D')
-        self.twh = 24 - 1e-8
+        self.twh = 24 - 1e-6
         self.ch = CleanerHelper()
 
     def parse_soup(self):
@@ -276,6 +276,11 @@ class TrimData(object):
         self.df = self.parse_soup()
         self.df = self.ch.sort_drop(self.df)
         self.df = self.clean_set()
+        self.df = self.trim_one()
+        self.df = self.trim_two()
+        self.df = self.overlapping_rows()
+        self.df = self.trim_dur()
+        self.df = self.ch.sort_drop(self.df)
         self.df = self.trim_one()
         self.df = self.trim_two()
         self.df = self.overlapping_rows()
