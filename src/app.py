@@ -5,8 +5,12 @@
 
 from bs4 import BeautifulSoup
 import gc
-import numpy as np
-import pandas as pd
+from numpy import where
+from pandas import to_timedelta as ToTd
+from pandas import to_datetime as ToDt
+from pandas import to_numeric as ToNm
+from pandas import DataFrame as DF
+from pandas import concat
 gc.enable()
 
 
@@ -34,25 +38,21 @@ class TrimData(object):
         self.soup_obj = soup_obj
         self.speed_unit = speed_unit
         self.measure_unit = measure_unit
-        self.one_day = pd.to_timedelta(1, 'D')
-        self.two_days = pd.to_timedelta(2, 'D')
+        self.one_day = ToTd(1, 'D')
+        self.two_days = ToTd(2, 'D')
         self.twh = 24 - 1e-8
         self.ch = CleanerHelper()
 
     def parse_soup(self):
-        self.df = pd.DataFrame()
+        self.df = DF()
         '''Insert the values in the original dataframe. Convert time to
            numerical format to make calculations easier.'''
-        self.df.loc[:, 'start_date'] = [
-            num['startDate'] for num in self.soup_obj]
-        self.df.loc[:, 'end_date'] = [
-            num['endDate'] for num in self.soup_obj]
-        self.df.loc[:, self.measure_unit] = [
-            num['value'] for num in self.soup_obj]
-        self.df.loc[:, 'source'] = [
-            num['sourceName'] for num in self.soup_obj]
-        self.df.loc[:, self.measure_unit] = self.df[
-            self.measure_unit].astype(float)
+        self.df.loc[:, 'start_date'] = [d['startDate'] for d in self.soup_obj]
+        self.df.loc[:, 'end_date'] = [d['endDate'] for d in self.soup_obj]
+        self.df.loc[:, self.measure_unit] = [d['value'] for d in self.soup_obj]
+        self.df.loc[:, 'source'] = [d['sourceName'] for d in self.soup_obj]
+        self.df.loc[
+            :, self.measure_unit] = self.df[self.measure_unit].astype(float)
         return self.df
 
     def clean_set(self):
@@ -68,21 +68,19 @@ class TrimData(object):
         end_date_df.loc[:, 'etd'] = end_date_df[0] + ' ' + end_date_df[1]
 
         # Convert the date to `datetime` and time to `timedelta`
-        start_date_df.loc[:, 'sd'] = pd.to_datetime(
-            start_date_df[0], format='%Y-%m-%d')
-        end_date_df.loc[:, 'ed'] = pd.to_datetime(
-            end_date_df[0], format='%Y-%m-%d')
+        start_date_df.loc[:, 'sd'] = ToDt(start_date_df[0], format='%Y-%m-%d')
+        end_date_df.loc[:, 'ed'] = ToDt(end_date_df[0], format='%Y-%m-%d')
 
-        start_date_df.loc[:, 'st'] = pd.to_timedelta(start_date_df[1])
-        end_date_df.loc[:, 'et'] = pd.to_timedelta(end_date_df[1])
+        start_date_df.loc[:, 'st'] = ToTd(start_date_df[1])
+        end_date_df.loc[:, 'et'] = ToTd(end_date_df[1])
 
         '''Insert the values in the original dataframe. Convert time to
            numerical format to make calculations easier.'''
         self.df.loc[:, 'start_date'] = start_date_df.sd.copy()
-        self.df.loc[:, 'start_time'] = pd.to_numeric(start_date_df.st) / 3.6e12
+        self.df.loc[:, 'start_time'] = ToNm(start_date_df.st) / 3.6e12
         self.df.loc[:, 'end_date'] = end_date_df.ed.copy()
-        self.df.loc[:, 'end_time'] = pd.to_numeric(end_date_df.et) / 3.6e12
-        self.df.loc[:, 'duration'] = pd.to_numeric(
+        self.df.loc[:, 'end_time'] = ToNm(end_date_df.et) / 3.6e12
+        self.df.loc[:, 'duration'] = ToNm(
             (end_date_df.ed + end_date_df.et) - (
                 start_date_df.sd + start_date_df.st)) / 3.6e12
 
@@ -93,10 +91,9 @@ class TrimData(object):
         self.df.loc[:, self.speed_unit] = self.df[
             self.measure_unit] / self.df['duration']
         # Create two different dfs to do separate calculations.
-        ndf1 = self.df[self.df[
-            'start_date'] + self.one_day == self.df['end_date']].copy()
-        ndf2 = self.df[self.df[
-            'start_date'] + self.one_day == self.df['end_date']].copy()
+        ndf1 = self.df[
+            self.df.start_date + self.one_day == self.df.end_date].copy()
+        ndf2 = ndf1.copy()
 
         '''Calculations for the first data frame are to trim values till the
            end of the first day. The calculations are done as follow:
@@ -109,8 +106,7 @@ class TrimData(object):
         ndf1.loc[:, 'end_date'] = ndf1['start_date'].copy()
         ndf1.loc[:, 'end_time'] = self.twh
         ndf1.loc[:, 'duration'] = ndf1['end_time'] - ndf1['start_time']
-        ndf1.loc[:, self.measure_unit] = ndf1[
-            self.speed_unit] * ndf1['duration']
+        ndf1.loc[:, self.measure_unit] = ndf1[self.speed_unit] * ndf1.duration
         ndf1 = self.ch.reset_drop(ndf1)
 
         '''Calculations for the second df are to trim values starting at
@@ -124,30 +120,28 @@ class TrimData(object):
         ndf2.loc[:, 'start_date'] = ndf2['end_date'].copy()
         ndf2.loc[:, 'start_time'] = 0.0
         ndf2.loc[:, 'duration'] = ndf2['end_time'] - ndf2['start_time']
-        ndf2.loc[:, self.measure_unit] = ndf2[
-            self.speed_unit] * ndf2['duration']
+        ndf2.loc[:, self.measure_unit] = ndf2[self.speed_unit] * ndf2.duration
         ndf2 = self.ch.reset_drop(ndf2)
 
         '''Drop the rows where the data spills to the next day, and append the
            new calculated values'''
         self.df = self.df[
-            self.df['start_date'] + self.one_day != self.df['end_date']].copy()
-        self.df = self.df.append([ndf1, ndf2], ignore_index=True, sort=False)
+            self.df.start_date + self.one_day != self.df.end_date].copy()
+        self.df = self.df.append(
+            [ndf1, ndf2], ignore_index=True, sort=False)
         self.df.sort_values(
             by=['start_date', 'start_time', 'end_time'], inplace=True)
         self.df = self.ch.reset_drop(self.df)
         return self.df
 
     def trim_two(self):
-        self.df.loc[:, self.speed_unit] = self.df[
-            self.measure_unit] / self.df['duration']
+        self.df.loc[
+            :, self.speed_unit] = self.df[self.measure_unit] / self.df.duration
         # Create three different dfs to do separate calculations.
-        ndf1 = self.df[self.df[
-            'start_date'] + self.two_days == self.df['end_date']].copy()
-        ndf2 = self.df[self.df[
-            'start_date'] + self.two_days == self.df['end_date']].copy()
-        ndf3 = self.df[self.df[
-            'start_date'] + self.two_days == self.df['end_date']].copy()
+        ndf1 = self.df[
+            self.df.start_date + self.two_days == self.df.end_date].copy()
+        ndf2 = ndf1.copy()
+        ndf3 = ndf1.copy()
 
         '''Calculations for the first data frame are to trim values till the
            end of the first day. The calculations are done as follow:
@@ -160,8 +154,7 @@ class TrimData(object):
         ndf1.loc[:, 'end_date'] = ndf1['start_date'].copy()
         ndf1.loc[:, 'end_time'] = self.twh
         ndf1.loc[:, 'duration'] = self.twh - ndf1['start_time']
-        ndf1.loc[:, self.measure_unit] = ndf1[
-            self.speed_unit] * ndf1['duration']
+        ndf1.loc[:, self.measure_unit] = ndf1[self.speed_unit] * ndf1.duration
         ndf1 = self.ch.reset_drop(ndf1)
 
         '''Calculations for the second data frame are to trim values till the
@@ -192,14 +185,13 @@ class TrimData(object):
         ndf3.loc[:, 'start_date'] = ndf3['end_date'].copy()
         ndf3.loc[:, 'start_time'] = 0
         ndf3.loc[:, 'duration'] = ndf3['end_time'].copy()
-        ndf3.loc[:, self.measure_unit] = ndf3[
-            self.speed_unit] * ndf3['duration']
+        ndf3.loc[:, self.measure_unit] = ndf3[self.speed_unit] * ndf3.duration
         ndf3 = self.ch.reset_drop(ndf3)
 
         '''Drop the rows where the data spills to two days, and append the
            new calculated values'''
-        self.df = self.df[self.df[
-            'start_date'] + self.two_days != self.df['end_date']].copy()
+        self.df = self.df[
+            self.df.start_date + self.two_days != self.df.end_date].copy()
         self.df = self.df.append(
             [ndf1, ndf2, ndf3], ignore_index=True, sort=False)
         self.df.sort_values(
@@ -222,11 +214,11 @@ class TrimData(object):
         pdf = 0
         while ldf != pdf:
             ldf = len(self.df)
-            self.df.loc[:, 'cond1'] = np.where(
+            self.df.loc[:, 'cond1'] = where(
                 self.df.start_time >= self.df.start_time.shift(1), 1, 0)
-            self.df.loc[:, 'cond2'] = np.where(
+            self.df.loc[:, 'cond2'] = where(
                 self.df.end_time <= self.df.end_time.shift(1), 1, 0)
-            self.df.loc[:, 'cond3'] = np.where(
+            self.df.loc[:, 'cond3'] = where(
                 self.df.start_date == self.df.start_date.shift(1), 1, 0)
             self.df.loc[:, 'condsum'] = (
                 self.df.cond1 + self.df.cond2 + self.df.cond3)
@@ -235,8 +227,8 @@ class TrimData(object):
 
         gc.collect()
         self.df.reset_index(inplace=True)
-        self.df.drop(columns=['cond1', 'cond2', 'cond3', 'condsum', 'index'],
-                     inplace=True)
+        self.df.drop(columns=['cond1', 'cond2', 'cond3',
+                              'condsum', 'index'], inplace=True)
         return self.df
 
     def trim_dur(self):
@@ -247,14 +239,14 @@ class TrimData(object):
               the next row.
            3. The sources have to be different, otherwise, we are just
               grouping all the data.'''
-        self.df.loc[:, 'cond1'] = np.where(
+        self.df.loc[:, 'cond1'] = where(
             self.df.end_time >= self.df.start_time.shift(1), 1, 0)
-        self.df.loc[:, 'cond2'] = np.where(
+        self.df.loc[:, 'cond2'] = where(
             self.df.start_date == self.df.start_date.shift(1), 1, 0)
-        self.df.loc[:, 'conds'] = np.where(
+        self.df.loc[:, 'conds'] = where(
             self.df.source != self.df.source.shift(1), 1, 0)
-        self.df.loc[:, 'condsum'] = self.df.cond1 + \
-            self.df.cond2 + self.df.conds
+        self.df.loc[:, 'condsum'] = (
+            self.df.cond1 + self.df.cond2 + self.df.conds)
         self.df.drop(columns=['cond1', 'cond2', 'conds'], inplace=True)
 
         # Duration is recalculated to make sure it is right.
@@ -266,17 +258,14 @@ class TrimData(object):
            2. Duration is recalculated.
            3. `measure_unit` is recalculated by multiplying the new duration
               and the `speed_unit`.'''
-        self.df.loc[:, 'start_time'] = np.where(
-            self.df['condsum'] == 3,
-            self.df.end_time.shift(1) - 1e-8,
+        self.df.loc[:, 'start_time'] = where(
+            self.df.condsum == 3, self.df.end_time.shift(1) - 1e-6,
             self.df.start_time)
-        self.df.loc[:, 'duration'] = np.where(
-            self.df['condsum'] == 3,
-            self.df.end_time - self.df.start_time,
-            self.df['duration'])
-        self.df.loc[:, self.measure_unit] = np.where(
-            self.df['condsum'] == 3,
-            self.df.duration * self.df[self.speed_unit],
+        self.df.loc[:, 'duration'] = where(
+            self.df.condsum == 3, self.df.end_time - self.df.start_time,
+            self.df.duration)
+        self.df.loc[:, self.measure_unit] = where(
+            self.df.condsum == 3, self.df.duration * self.df[self.speed_unit],
             self.df[self.measure_unit])
 
         self.df.reset_index(inplace=True)
@@ -291,8 +280,8 @@ class TrimData(object):
         self.df = self.trim_two()
         self.df = self.overlapping_rows()
         self.df = self.trim_dur()
-        self.df.drop(
-            columns=['start_time', 'end_time', 'duration'], inplace=True)
+        self.df.drop(columns=['start_time', 'end_time',
+                              'duration'], inplace=True)
         daily_df = self.df.groupby(by=['start_date', 'end_date']).sum()
         return self.df, daily_df
 
@@ -312,12 +301,11 @@ class FXYRS(object):
         '''Step 2: Parse all the flights climbed, distance walked, and steps
         taken data to a dictionary like format that makes it easy to extract
         values.'''
-        flights = soup.findAll(
-            'Record', {'type': 'HKQuantityTypeIdentifierFlightsClimbed'})
+        fp_ = 'HKQuantityTypeIdentifier'
+        flights = soup.findAll('Record', {'type': f'{fp_}FlightsClimbed'})
         distance = soup.findAll(
-            'Record', {'type': 'HKQuantityTypeIdentifierDistanceWalkingRunning'})
-        steps = soup.findAll(
-            'Record', {'type': 'HKQuantityTypeIdentifierStepCount'})
+            'Record', {'type': f'{fp_}DistanceWalkingRunning'})
+        steps = soup.findAll('Record', {'type': f'{fp_}StepCount'})
 
         '''Step 3: Create distance, steps, and flights dfs from the xml data
         using the TrimData class.'''
@@ -330,7 +318,7 @@ class FXYRS(object):
         steps_set = TrimData(steps, 'sph', 'num_steps')
         sdf, dsdf = steps_set.run_all()
 
-        cdf = pd.concat([dsdf, dddf, ffdf], sort=False, axis=1)
+        cdf = concat([dsdf, dddf, ffdf], sort=False, axis=1)
 
         cdf.loc[:, 'ft_per_step'] = cdf.tot_dist * 5280 / cdf.num_steps
         cdf.drop(columns=['sph', 'mph', 'fph'], inplace=True)
