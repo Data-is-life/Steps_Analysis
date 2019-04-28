@@ -3,6 +3,7 @@
 # Git-Hub: Data-is-Life
 
 import pandas as pd
+from pandas import to_datetime as ToDt
 import numpy as np
 import re
 from datetime import date, timedelta
@@ -60,68 +61,129 @@ class MainStats(object):
     It returns the df sorted by the score for the specified time-frame.
 
     `dwm` is time-frame. It accepts the following strings:
-    `Month`, `Week`, `Day of Week`, or `Day of Month`
+    `Month`, `Week`, `Day of Week`, or `Day of Month`'''
 
-    `s_by` is sort the by which score. It accepts the following strings:
-    `steps`, `distance`, or `floors` '''
-
-    def __init__(self, df, dwm, s_by='n/a'):
+    def __init__(self, cdf, dwm):
         super(MainStats, self).__init__()
-        self.df = df
-        self.dwm = dwm
-        self.s_by = s_by
         self.Sh = StatsHelper()
-        self.meancols = ['mean_steps', 'mean_dist', 'mean_flrs', 'mean_fps']
-        self.stdcols = ['std_steps', 'std_dist', 'std_flrs', 'std_fps']
+        self.df = cdf.copy()
+        self.dwm = dwm
         self.date_dict = {
             'week': ['%U%Y', 'week_range', self.Sh.weeks_dates],
             'month': ['%B%Y', 'month_year', self.Sh.split_str],
             'day of week': ['%A%Y', 'weekday_year', self.Sh.split_str],
             'day of month': ['%d%Y', 'date_year', self.Sh.split_num]}
-        self.sby_dict = {'steps': 'steps_score', 'distance': 'dist_score',
-                         'floors': 'floors_score'}
+        self.meancols = ['mean_steps', 'mean_dist', 'mean_flrs', 'mean_fps']
+        self.stdcols = ['std_steps', 'std_dist', 'std_flrs', 'std_fps']
+        self.date_ = self.date_dict[self.dwm][0]
+        self.cols_ = self.date_dict[self.dwm][1]
 
     def custom_stats(self):
-        date_ = self.date_dict[self.dwm][0]
-        cols_ = self.date_dict[self.dwm][1]
-        sort_ = self.sby_dict[self.s_by]
-        ndf = self.df.rename(columns={'start_date': cols_}).copy()
-        ndf.loc[:, cols_] = ndf[cols_].dt.strftime(date_)
+        
+        ndf = self.df.rename(columns={'start_date': self.cols_}).copy()
+        ndf.loc[:, self.cols_] = ndf[self.cols_].dt.strftime(self.date_)
 
         if self.dwm == 'week':
-            gdf = ndf.groupby(by=[cols_]).count()
+            gdf = ndf.groupby(by=[self.cols_]).count()
             vals_to_change = [str(i) for i in gdf[gdf['end_date'] < 7].index
                               if int(str(i)[:2]) >= 52]
             if len(vals_to_change) > 1:
                 for vtc in vals_to_change:
-                    i = [_ for _ in ndf[ndf[cols_] == vtc].index]
-                    ndf.loc[i, cols_] = ndf.loc[
-                        i, cols_].apply(self.Sh.week_fix)
+                    i = [_ for _ in ndf[ndf[self.cols_] == vtc].index]
+                    ndf.loc[i, self.cols_] = ndf.loc[
+                        i, self.cols_].apply(self.Sh.week_fix)
 
-        std_df = ndf.groupby(ndf[cols_], sort=False).std()
+        std_df = ndf.groupby(ndf[self.cols_], sort=False).std()
         std_df.columns = self.stdcols
 
-        mean_df = ndf.groupby(ndf[cols_], sort=False).mean()
+        mean_df = ndf.groupby(ndf[self.cols_], sort=False).mean()
         mean_df.columns = self.meancols
 
-        score_df = pd.concat([std_df, mean_df], axis=1)
-        score_df.reset_index(inplace=True)
-        score_df.loc[
-            :, cols_] = score_df[cols_].apply(self.date_dict[self.dwm][2])
+        self.df = pd.concat([std_df, mean_df], axis=1)
+        self.df.reset_index(inplace=True)
+        self.df.loc[:, self.cols_] = self.df[self.cols_].apply(
+            self.date_dict[self.dwm][2])
 
-        score_df.loc[:, 'steps_score'] = (
-            score_df.mean_steps**2) / score_df.std_steps
-        score_df.loc[:, 'dist_score'] = (
-            score_df.mean_dist**2) / score_df.std_dist
-        score_df.loc[:, 'floors_score'] = np.where(
-            score_df.std_flrs >= 1e-4, (
-                (score_df.mean_flrs**2) / score_df.std_flrs), 0)
-        score_df.sort_values(by=sort_, ascending=False, inplace=True)
+        self.df.loc[:, 'steps_score'] = (
+            self.df.mean_steps**2) / self.df.std_steps
+        self.df.loc[:, 'dist_score'] = (
+            self.df.mean_dist**2) / self.df.std_dist
+        self.df.loc[:, 'floors_score'] = np.where(
+            self.df.std_flrs >= 1e-4, (
+                (self.df.mean_flrs**2) / self.df.std_flrs), 0)
 
-        score_df.reset_index(inplace=True)
-        score_df.drop(columns=['index'], inplace=True)
+        self.df.sort_values(by=self.cols_, inplace=True)
+        self.df.reset_index(inplace=True)
+        self.df.drop(columns=['index'], inplace=True)
+        self.df.dropna(inplace=True)
 
-        return score_df
+        return self.df
+
+    def ldf(self, x):
+        return x.split('-')
+
+    def week_func(self):
+        self.df.sort_values(by=[self.cols_], inplace=True)
+        self.df.loc[:, self.cols_] = self.df[self.cols_].str.replace(
+            '201', '1').str.replace(' to ', '-')
+        self.df.loc[:, self.cols_] = self.df[self.cols_].str.split('-')
+        self.df.loc[:, self.cols_] = self.df[self.cols_].apply(
+            lambda x: f'{x[1]}.{x[2]}.{x[0]}')
+        return self.df
+
+    def month_func(self):
+        self.df.loc[:, self.cols_] = ToDt(
+            self.df[self.cols_], infer_datetime_format=False)
+        self.df.sort_values(by=[self.cols_], inplace=True)
+        self.df.loc[:, self.cols_] = self.df[self.cols_].dt.strftime('%B %Y')
+        return self.df
+
+    def dow_func(self):
+        self.df.loc[:, self.cols_] = ToDt(
+            self.df[self.cols_], infer_datetime_format=False)
+        self.df.sort_values(by=[self.cols_], inplace=True)
+        self.df.loc[:, self.cols_] = self.df[self.cols_].dt.strftime(
+            '%A %Y').str.replace('day', '').str.replace(
+                'nes', '').str.replace('Satur', 'Sat')
+        return self.df
+
+    def dom_func(self):
+        self.df.loc[:, self.cols_] = self.df[self.cols_].apply(
+            lambda x: f"{self.ldf(x)[1]}-{self.ldf(x)[0]}")
+        self.df.loc[:, self.cols_] = self.df[self.cols_].astype(str)
+        self.df.sort_values(by=[self.cols_], inplace=True)
+        return self.df
+
+    def score_func(self):
+        smx = self.df.steps_score.max()
+        dmx = self.df.dist_score.max()
+        fmx = self.df.floors_score.max()
+        self.df.loc[:, 'steps_score'] = (self.df.steps_score / smx) * 100
+        self.df.loc[:, 'dist_score'] = (self.df.dist_score / dmx) * 100
+        self.df.loc[:, 'floors_score'] = (self.df.floors_score / fmx) * 100
+        for col in self.df.columns:
+            if 'step' in col or 'score' in col:
+                self.df.loc[:, col] = round(self.df[col], 1)
+        self.df.reset_index(inplace=True)
+        self.df.drop(columns=['index'], inplace=True)
+        self.df.loc[:, 'mean_dist'] = round(self.df['mean_dist'], 2)
+        self.df.loc[:, 'mean_flrs'] = round(self.df['mean_flrs'], 2)
+        return self.df
+
+    def run_all(self):
+        func_dict = {'week': self.week_func, 'day of week': self.dow_func,
+                     'month': self.month_func, 'day of month': self.dom_func}
+
+        self.df = self.custom_stats()
+        tfunc = func_dict[self.dwm]
+        self.df = tfunc()
+        self.df = self.score_func()
+        return self.df
+
+
+
+
+
 
 
 # class RollingStats(object):
