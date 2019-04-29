@@ -6,6 +6,7 @@
 from bs4 import BeautifulSoup
 import gc
 from numpy import where
+from numpy import mean as NpM
 from pandas import to_timedelta as ToTd
 from pandas import to_datetime as ToDt
 from pandas import to_numeric as ToNm
@@ -311,24 +312,35 @@ class FXYRS(object):
         distance = soup.findAll(
             'Record', {'type': f'{fp_}DistanceWalkingRunning'})
         steps = soup.findAll('Record', {'type': f'{fp_}StepCount'})
+        gc.collect()
 
         '''Step 3: Create distance, steps, and flights dfs from the xml data
         using the TrimData class.'''
         floors_set = TrimData(flights, 'fph', 'num_floors')
         fdf, ffdf = floors_set.run_all()
+        gc.collect()
 
         dist_set = TrimData(distance, 'mph', 'tot_dist')
         ddf, dddf = dist_set.run_all()
+        gc.collect()
 
         steps_set = TrimData(steps, 'sph', 'num_steps')
         sdf, dsdf = steps_set.run_all()
+        gc.collect()
 
         cdf = concat([dsdf, dddf, ffdf], sort=False, axis=1)
+        del dsdf
+        del dddf
+        del ffdf
+        gc.collect()
 
         cdf.loc[:, 'ft_per_step'] = cdf.tot_dist * 5280 / cdf.num_steps
         cdf.drop(columns=['sph', 'mph', 'fph'], inplace=True)
 
         cdf.reset_index(inplace=True)
         cdf.fillna(0, inplace=True)
+        cdf.loc[:, 'avg_steps'] = [NpM(cdf.num_steps[0:i+1]) for i in cdf.index]
+        cdf.loc[:, 'avg_dist'] = [NpM(cdf.tot_dist[0:i+1]) for i in cdf.index]
+        cdf.loc[:, 'avg_flrs'] = [NpM(cdf.num_floors[0:i+1]) for i in cdf.index]
 
         return fdf, ddf, sdf, cdf

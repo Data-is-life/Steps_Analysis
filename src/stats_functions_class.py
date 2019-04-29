@@ -93,14 +93,20 @@ class MainStats(object):
                     ndf.loc[i, self.cols_] = ndf.loc[
                         i, self.cols_].apply(self.Sh.week_fix)
 
+        running_mean_cols = ['avg_steps', 'avg_dist', 'avg_flrs']
         std_df = ndf.groupby(ndf[self.cols_], sort=False).std()
+        std_df.drop(columns=running_mean_cols, inplace=True)
         std_df.columns = self.stdcols
 
         mean_df = ndf.groupby(ndf[self.cols_], sort=False).mean()
+        mean_df.drop(columns=running_mean_cols, inplace=True)
         mean_df.columns = self.meancols
 
         self.df = pd.concat([std_df, mean_df], axis=1)
         self.df.reset_index(inplace=True)
+        for new_col in running_mean_cols:
+            self.df.loc[:, new_col] = ndf[new_col].copy()
+
         self.df.loc[:, self.cols_] = self.df[self.cols_].apply(
             self.date_dict[self.dwm][2])
 
