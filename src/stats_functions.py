@@ -17,7 +17,7 @@ class StatsHelper(object):
         '''The values for time period in the monthly and day of the week summarized
            df are combined. Using RegEx to split them.
            eg: Monday2017 to Monday 2017
-               March2018  to March 2018'''
+               March2018  to March 2018 '''
 
         nmyr = re.split(r'(\d+)', self.dmyr)
         dm = nmyr[0]
